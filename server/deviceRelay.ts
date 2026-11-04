@@ -1,11 +1,13 @@
 import type { Connect, Plugin } from 'vite';
+import { createChatStore, validateChat } from './chat';
 
 /**
- * Dev-server relay for the Arduino pulse oximeter.
+ * Dev-server relay for the Arduino pulse oximeter and the class chat.
  *
  * The Arduino POSTs a reading to /api/reading about once a second. The relay keeps the latest
  * reading per device in memory and pushes it to every open page over Server-Sent Events
- * (/api/stream). Nothing is saved: restarting `npm run dev` forgets every device.
+ * (/api/stream). Pages POST chat messages to /api/chat, and the relay pushes those out the same way
+ * (see ./chat.ts). Nothing is saved: restarting `npm run dev` forgets every device and every message.
  *
  * Reading contract (JSON or form-style text):
  *   {"device":"oxi-1","bpm":92,"spo2":97,"finger":true}
@@ -19,7 +21,7 @@ type Res = Parameters<Connect.NextHandleFunction>[1];
 type RelayReading = { device: string; bpm: number | null; spo2: number | null; finger: boolean; at: number };
 
 const DEVICE_RE = /^[A-Za-z0-9_-]{1,32}$/;
-const MAX_BODY_CHARS = 2048;
+const MAX_BODY_CHARS = 4096;
 const KEEP_ALIVE_MS = 15_000;
 
 const toNumber = (v: unknown) => (typeof v === 'number' ? v : typeof v === 'string' && v.trim() !== '' ? Number(v) : NaN);
@@ -73,10 +75,11 @@ function sendText(res: Res, status: number, text = '') {
 
 function attachRelay(middlewares: Connect.Server) {
   const latest = new Map<string, RelayReading>();
+  const chat = createChatStore();
   const clients = new Set<Res>();
   const event = (res: Res, name: string, data: unknown) => res.write(`event: ${name}\ndata: ${JSON.stringify(data)}\n\n`);
-  /** Readings go out with their age rather than a timestamp, so a phone with a different clock still works. */
-  const withAge = (r: RelayReading, now: number) => {
+  /** Readings and messages go out with their age rather than a timestamp, so a phone with a different clock still works. */
+  const withAge = <T extends { at: number }>(r: T, now: number) => {
     const { at, ...rest } = r;
     return { ...rest, ageMs: now - at };
   };
@@ -107,6 +110,27 @@ function attachRelay(middlewares: Connect.Server) {
       return sendText(res, 204);
     }
 
+    if (path === '/chat' && req.method === 'POST') {
+      let body: Record<string, unknown>;
+      try {
+        body = parseBody(await readBody(req));
+      } catch (err) {
+        return sendText(res, 400, `Could not read body: ${(err as Error).message}\n`);
+      }
+      const message = validateChat(body, Date.now());
+      if (typeof message === 'string') return sendText(res, 400, message + '\n');
+      // A resend of a stored message (same id) is accepted but not sent out again.
+      if (chat.add(message)) clients.forEach((client) => event(client, 'chat', withAge(message, message.at)));
+      return sendText(res, 204);
+    }
+
+    if (path === '/chat' && req.method === 'GET') {
+      const now = Date.now();
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'application/json');
+      return res.end(JSON.stringify(chat.all().map((m) => withAge(m, now)), null, 2) + '\n');
+    }
+
     if (path === '/stream' && req.method === 'GET') {
       res.statusCode = 200;
       res.setHeader('Content-Type', 'text/event-stream');
@@ -114,6 +138,7 @@ function attachRelay(middlewares: Connect.Server) {
       res.setHeader('Connection', 'keep-alive');
       const now = Date.now();
       event(res, 'snapshot', [...latest.values()].map((r) => withAge(r, now)));
+      event(res, 'chat-snapshot', chat.all().map((m) => withAge(m, now)));
       clients.add(res);
       req.on('close', () => clients.delete(res));
       return;

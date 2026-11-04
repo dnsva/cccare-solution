@@ -20,7 +20,6 @@ export function App() {
             Participant · {PARTICIPANT.firstName}
           </button>
         </div>
-        <span className="proto-bar__note">Everything clicks · resets on reload</span>
       </div>
       {/* Both stay mounted so each side keeps its place when you switch roles. */}
       <div className="app__view" hidden={role !== 'instructor'}>

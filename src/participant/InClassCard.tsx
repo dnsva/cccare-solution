@@ -34,10 +34,10 @@ const PHASE_VIDEO_TEXT: Record<PhaseId, string> = {
 
 export const openVideo = (link?: string) => link && window.open(link, '_blank', 'noopener');
 
-type Props = { section: Section; me: Participant; onLeave: () => void; onOpenProgram: () => void };
+type Props = { section: Section; me: Participant; onLeave: () => void; onOpenPlan: () => void };
 
 /** What a participant sees after tapping "Join class now". */
-export function InClassCard({ section, me, onLeave, onOpenProgram }: Props) {
+export function InClassCard({ section, me, onLeave, onOpenPlan }: Props) {
   const store = useStore();
   const now = useNow(READING_MS);
   const sensors = useLiveDevices();
@@ -62,10 +62,10 @@ export function InClassCard({ section, me, onLeave, onOpenProgram }: Props) {
       <div className="p-live__grid">
         {phase === 'strength' ? (
           <div className="p-live__strength">
-            <b className="p-live__strength-title">Time for your strength program</b>
-            <span>Do your exercises at your own pace, then log your sets, reps and weights.</span>
-            <button className="p-live__reopen" onClick={onOpenProgram}>
-              Open My program
+            <b className="p-live__strength-title">Strength time</b>
+            <span>Follow along with {STAFF_LABEL} on the video call. Rest between sets.</span>
+            <button className="p-live__reopen" onClick={onOpenPlan}>
+              See today's exercises
             </button>
           </div>
         ) : (

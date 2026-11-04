@@ -319,6 +319,25 @@ button {
   border-radius: 20px 6px 20px 20px;
 }
 
+/* This device's own messages before the server has them */
+.chat-msg--sending .chat-msg__bubble {
+  opacity: 0.6;
+}
+
+.chat-status--failed {
+  color: var(--danger);
+}
+
+.chat-status__retry {
+  font: inherit;
+  color: inherit;
+  text-decoration: underline;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
 /* Instructor: fixed px sizes */
 .chat-log--instructor {
   height: 460px;
