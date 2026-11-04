@@ -3,7 +3,7 @@ import { defaultProgram, SEED_LIVE_MINUTES_AGO, SEED_PARTICIPANTS, SEED_SECTIONS
 import { chatTime, fromRelay, newMessageId, sendToRelay, type IncomingChat, type OutgoingChat } from './lib/chatSync';
 import { phaseAt, phaseStartMs, targetZone } from './lib/dosage';
 import { subscribe } from './lib/relayStream';
-import type { ChatMessage, ClassType, LogEntry, Participant, ProgramItem, Section, SectionDetails } from './types';
+import type { ChatMessage, ClassType, Participant, ProgramItem, Section, SectionDetails } from './types';
 
 export type NewParticipant = { name: string; age: number; restingBpm: number; maxBpm?: number };
 export type HeartRateDetails = Pick<Participant, 'restingBpm' | 'maxBpm' | 'zonePct'>;
@@ -169,13 +169,6 @@ function useCccareState() {
     /** Start the next 12-session exercise set with the given exercises. */
     startNewSet(id: string, program: ProgramItem[], hr: HeartRateDetails) {
       updateParticipant(id, (p) => ({ ...p, ...hr, program, setStartedAt: p.sessionsDone }));
-    },
-    logSession(id: string, entries: LogEntry[]) {
-      updateParticipant(id, (p) => ({
-        ...p,
-        sessionsDone: p.sessionsDone + 1,
-        logs: [...p.logs, { session: p.sessionsDone + 1, entries }],
-      }));
     },
     /** Seed messages, then what the server has stored, then this device's unsent messages. */
     chatFor: (code: string): ChatMessage[] => [

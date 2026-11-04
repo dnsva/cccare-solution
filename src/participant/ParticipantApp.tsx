@@ -2,15 +2,15 @@ import { useState } from 'react';
 import { PARTICIPANT_TEXT_SIZE } from '../config';
 import { PARTICIPANT, STREAK } from '../data';
 import { ParticipantClassPage } from './ParticipantClassPage';
-import { ProgramPage } from './ProgramPage';
 import { StreakPage } from './StreakPage';
+import { TodayPage } from './TodayPage';
 import './participant.css';
 
-type Tab = 'streak' | 'program' | 'class';
+type Tab = 'streak' | 'today' | 'class';
 
 const TABS: [Tab, string][] = [
   ['streak', 'My streak'],
-  ['program', 'My program'],
+  ['today', "Today's plan"],
   ['class', 'My class'],
 ];
 
@@ -20,8 +20,6 @@ export function ParticipantApp() {
   const [month, setMonth] = useState(STREAK.today.getMonth());
   const [draft, setDraft] = useState('');
   const [joined, setJoined] = useState(false);
-  /** Session number logged today, if any. */
-  const [loggedSession, setLoggedSession] = useState<number | null>(null);
 
   return (
     <div className="participant" style={{ fontSize: PARTICIPANT_TEXT_SIZE }}>
@@ -40,19 +38,18 @@ export function ParticipantApp() {
           </span>
         </div>
       </header>
-      {/* All tabs stay mounted so an unsaved log or chat draft survives switching tabs. */}
+      {/* All tabs stay mounted so a chat draft or the picked calendar day survives switching tabs. */}
       <div hidden={tab !== 'streak'}>
-        <StreakPage movedToday={movedToday} onToggleToday={() => setMovedToday((v) => !v)} month={month} onMonth={setMonth} />
-      </div>
-      <div hidden={tab !== 'program'}>
-        <ProgramPage
-          loggedSession={loggedSession}
-          onLogged={(session) => {
-            setLoggedSession(session);
-            setMovedToday(true);
-          }}
-          onLogAnother={() => setLoggedSession(null)}
+        <StreakPage
+          movedToday={movedToday}
+          onToggleToday={() => setMovedToday((v) => !v)}
+          month={month}
+          onMonth={setMonth}
+          onOpenPlan={() => setTab('today')}
         />
+      </div>
+      <div hidden={tab !== 'today'}>
+        <TodayPage onGoToClass={() => setTab('class')} />
       </div>
       <div hidden={tab !== 'class'}>
         <ParticipantClassPage
@@ -60,7 +57,7 @@ export function ParticipantApp() {
           onDraft={setDraft}
           joined={joined}
           onJoined={setJoined}
-          onOpenProgram={() => setTab('program')}
+          onOpenPlan={() => setTab('today')}
         />
       </div>
     </div>
