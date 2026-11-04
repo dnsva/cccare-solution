@@ -712,6 +712,7 @@ button.p-cal__day:hover {
 
 .p-day {
   grid-column: 1 / -1;
+  scroll-margin-top: 16px;
   border-radius: 28px;
   padding: 1.4em;
   display: flex;
@@ -911,41 +912,49 @@ button.p-cal__day:hover {
   height: 1.9em;
 }
 
-/* ---------- Today's plan ---------- */
+/* ---------- Full class plan, inside today's panel ---------- */
 
 .tp {
-  max-width: 860px;
-  margin: 0 auto;
-  padding: 24px 20px 56px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 1.4em;
 }
 
-.tp-hero {
-  border-radius: 28px;
-  padding: 1.3em 1.4em;
+.tp-block {
   display: flex;
   flex-direction: column;
-  gap: 0.4em;
+  gap: 0.9em;
+  padding-top: 1.1em;
+  border-top: 1.5px solid var(--line);
 }
 
-.tp-hero__when {
-  font-weight: 700;
-  font-size: 0.9em;
+.tp-block__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.3em 1em;
 }
 
-.tp-hero__title {
-  font-size: 2.6em;
-  line-height: 0.95;
+.tp-block__title {
+  margin: 0;
+  font: 400 1.5em/1 var(--font-display);
+}
+
+.tp-note {
+  margin: 0;
+  font-size: 0.85em;
+  color: var(--ink-soft);
 }
 
 .tp-live {
-  margin-top: 0.4em;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 0.6em 1em;
+  padding: 0.7em 1em;
+  border-radius: 18px;
+  background: var(--mint);
 }
 
 .tp-live__go {
@@ -957,35 +966,6 @@ button.p-cal__day:hover {
   color: #fff;
   font-weight: 700;
   font-size: 1em;
-}
-
-.tp-card {
-  background: #fff;
-  border: 1.5px solid var(--line);
-  border-radius: 28px;
-  padding: 1.3em 1.4em;
-  display: flex;
-  flex-direction: column;
-  gap: 0.9em;
-}
-
-.tp-card__head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 0.3em 1em;
-}
-
-.tp-card__title {
-  margin: 0;
-  font: 400 1.7em/1 var(--font-display);
-}
-
-.tp-card__note {
-  margin: 0;
-  font-size: 0.85em;
-  color: var(--ink-soft);
 }
 
 .tp-follow {
