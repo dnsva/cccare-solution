@@ -3,3 +3,4 @@ dist
 .DS_Store
 *.docx
 arduino/**/secrets.h
+wifi_test/**/secrets.h

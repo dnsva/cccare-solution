@@ -1,0 +1,1 @@
+This folder contains a test script to ensure the Arduino and WiFi Shield are working correctly to upload data to a ThingSpeak data website.
