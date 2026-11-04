@@ -13,10 +13,10 @@ type Props = {
   onDraft: (text: string) => void;
   joined: boolean;
   onJoined: (joined: boolean) => void;
-  onOpenProgram: () => void;
+  onOpenPlan: () => void;
 };
 
-export function ParticipantClassPage({ draft, onDraft, joined, onJoined, onOpenProgram }: Props) {
+export function ParticipantClassPage({ draft, onDraft, joined, onJoined, onOpenPlan }: Props) {
   const store = useStore();
   const section = store.sectionByCode(PARTICIPANT.sectionCode);
   const me = section?.participantIds.includes(PARTICIPANT.id) ? store.participantById(PARTICIPANT.id) : undefined;
@@ -47,7 +47,7 @@ export function ParticipantClassPage({ draft, onDraft, joined, onJoined, onOpenP
   return (
     <main className="p-class">
       {joined && live ? (
-        <InClassCard section={section} me={me} onLeave={() => onJoined(false)} onOpenProgram={onOpenProgram} />
+        <InClassCard section={section} me={me} onLeave={() => onJoined(false)} onOpenPlan={onOpenPlan} />
       ) : (
         <section className="p-class__hero" style={{ background: type?.color ?? 'var(--sky)' }}>
           <div className="p-class__info">
@@ -85,7 +85,12 @@ export function ParticipantClassPage({ draft, onDraft, joined, onJoined, onOpenP
 
       <section className="p-chat">
         <h2 className="p-chat__head">Class chat</h2>
-        <ChatLog messages={store.chatFor(section.code)} viewer="participant" participantName={PARTICIPANT.name} />
+        <ChatLog
+          messages={store.chatFor(section.code)}
+          viewer="participant"
+          participantName={PARTICIPANT.name}
+          onRetry={(id) => store.retryMessage(section.code, id)}
+        />
         <div className="p-chat__composer">
           <div className="p-chat__quick">
             {QUICK_REPLIES.map((q) => (

@@ -29,7 +29,11 @@ export function ClassChat({ section, draft, onDraft, announcing, onAnnouncing }:
         <b>Class chat</b>
         <span className="muted">{plural(section.participantIds.length, 'participant')} + you</span>
       </div>
-      <ChatLog messages={store.chatFor(section.code)} viewer="instructor" />
+      <ChatLog
+        messages={store.chatFor(section.code)}
+        viewer="instructor"
+        onRetry={(id) => store.retryMessage(section.code, id)}
+      />
       <div className="i-chat__composer">
         <input
           className="input i-chat__input"

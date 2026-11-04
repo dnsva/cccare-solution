@@ -1,4 +1,11 @@
-import { PARTICIPANT, STREAK } from '../data';
+import { useEffect, useRef, type Ref } from 'react';
+import { INSTRUCTOR, PARTICIPANT, STAFF_LABEL, STREAK } from '../data';
+import { phaseAt, phasesFor } from '../lib/dosage';
+import { useNow } from '../lib/useNow';
+import { useStore } from '../store';
+import { ExerciseList } from './ExerciseList';
+import { addMinutes, dayRecord, isSameDay, loggedRows, movedOn, nextClassDay, plannedRows, today } from './history';
+import { TodayPlan } from './TodayPlan';
 
 type Props = {
   movedToday: boolean;
@@ -6,19 +13,41 @@ type Props = {
   /** 0-based month shown in the calendar, in the streak's year. */
   month: number;
   onMonth: (month: number) => void;
+  /** The calendar day whose details show below it. */
+  picked: Date;
+  onPick: (date: Date) => void;
+  /** Whether today's panel shows the full class plan. */
+  planOpen: boolean;
+  onPlanOpen: (open: boolean) => void;
+  onGoToClass: () => void;
 };
 
 const WEEKDAYS = 'SMTWTFS'.split('');
-const { today } = STREAK;
 const year = today.getFullYear();
 const firstMonth = Math.min(...Object.keys(STREAK.moved).map(Number));
 const lastMonth = today.getMonth();
 
-const isSameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
+const longDate = (d: Date) => d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
-export function StreakPage({ movedToday, onToggleToday, month, onMonth }: Props) {
-  const moved = (date: Date) =>
-    isSameDay(date, today) ? movedToday : date < today && !!STREAK.moved[date.getMonth()]?.has(date.getDate());
+export function StreakPage(props: Props) {
+  const { movedToday, onToggleToday, month, onMonth, picked, onPick, planOpen, onPlanOpen, onGoToClass } = props;
+  const panelRef = useRef<HTMLElement>(null);
+  /** On a phone the panel sits below the calendar, so bring it into view. */
+  const showPanel = (block: ScrollLogicalPosition = 'nearest') =>
+    requestAnimationFrame(() => panelRef.current?.scrollIntoView({ behavior: 'smooth', block }));
+  const pick = (date: Date) => {
+    onPick(date);
+    showPanel();
+  };
+
+  // Opening or closing the full plan (here, or from class) changes the panel's height a lot. An open plan is
+  // taller than the screen, so show it from the top.
+  const firstRender = useRef(true);
+  useEffect(() => {
+    if (firstRender.current) firstRender.current = false;
+    else showPanel(planOpen ? 'start' : 'nearest');
+  }, [planOpen]);
+  const moved = (date: Date) => movedOn(date, movedToday);
 
   const week = WEEKDAYS.map((letter, i) => {
     const date = new Date(year, today.getMonth(), today.getDate() - today.getDay() + i);
@@ -33,12 +62,13 @@ export function StreakPage({ movedToday, onToggleToday, month, onMonth }: Props)
   const movedCount = days.filter((d) => d.done).length;
 
   const streak = STREAK.baseDays + (movedToday ? 1 : 0);
+  const viewingPast = !isSameDay(picked, today);
 
   return (
     <main className="p-streak">
       <section className="p-hero">
         <div className="p-hero__date">
-          Hi {PARTICIPANT.firstName} · {today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+          Hi {PARTICIPANT.firstName} · {longDate(today)}
         </div>
         <h1 className="display p-hero__title">{streak} days in a row!</h1>
         <div>
@@ -50,8 +80,8 @@ export function StreakPage({ movedToday, onToggleToday, month, onMonth }: Props)
           {week.map(({ letter, date, done, isToday, future }) => (
             <div key={letter + date.getDate()} className={'p-week__day' + (future ? ' p-week__day--future' : '')}>
               <span className="p-week__letter">{letter}</span>
-              <span className={'p-week__num' + (done ? ' is-done' : isToday ? ' is-today' : '')}>{date.getDate()}</span>
-              <span className="p-week__mark">{done ? '✓' : isToday ? 'Today' : ''}</span>
+              <span className={'p-week__num' + (done ? ' is-done' : '') + (isToday ? ' is-today' : '')}>{date.getDate()}</span>
+              <span className="p-week__mark">{isToday ? 'Today' : done ? '✓' : ''}</span>
             </div>
           ))}
         </div>
@@ -63,7 +93,7 @@ export function StreakPage({ movedToday, onToggleToday, month, onMonth }: Props)
         </div>
       </section>
 
-      <section className="p-cal">
+      <section className={'p-cal' + (viewingPast ? ' is-viewing-past' : '')}>
         <div className="p-cal__head">
           <h2 className="display p-cal__title">
             {new Date(year, month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
@@ -77,6 +107,7 @@ export function StreakPage({ movedToday, onToggleToday, month, onMonth }: Props)
             </button>
           </div>
         </div>
+        <p className="p-cal__hint">Tap a day to see what you did.</p>
         <div className="p-cal__grid p-cal__weekdays" aria-hidden="true">
           {WEEKDAYS.map((l, i) => (
             <span key={i}>{l}</span>
@@ -88,15 +119,26 @@ export function StreakPage({ movedToday, onToggleToday, month, onMonth }: Props)
           ))}
           {days.map(({ date, done, isToday, future }) => {
             const cls =
-              'p-cal__day' + (done ? ' is-done' : isToday ? ' is-today' : future ? ' is-future' : ' is-missed');
-            return isToday ? (
-              <button key={date.getDate()} className={cls} aria-pressed={done} aria-label="Today" onClick={onToggleToday}>
+              'p-cal__day' +
+              (done ? ' is-done' : future ? ' is-future' : isToday ? '' : ' is-missed') +
+              (isToday ? ' is-today' : '') +
+              (isSameDay(date, picked) ? ' is-picked' : '');
+            if (future)
+              return (
+                <span key={date.getDate()} className={cls}>
+                  {date.getDate()}
+                </span>
+              );
+            return (
+              <button
+                key={date.getDate()}
+                className={cls}
+                aria-pressed={isSameDay(date, picked)}
+                aria-label={`${isToday ? 'Today, ' : ''}${longDate(date)}${done ? ', moved' : ''}`}
+                onClick={() => pick(date)}
+              >
                 {date.getDate()}
               </button>
-            ) : (
-              <span key={date.getDate()} className={cls}>
-                {date.getDate()}
-              </span>
             );
           })}
         </div>
@@ -109,9 +151,136 @@ export function StreakPage({ movedToday, onToggleToday, month, onMonth }: Props)
             <span className="p-cal__swatch is-today" />
             Today
           </span>
+          <span className="p-cal__key">
+            <span className="p-cal__swatch is-picked" />
+            Looking back
+          </span>
           <b className="p-cal__count">{movedCount} moving days</b>
         </div>
       </section>
+
+      <DayPanel
+        panelRef={panelRef}
+        date={picked}
+        moved={moved(picked)}
+        onBackToToday={() => {
+          onPick(today);
+          onMonth(today.getMonth());
+        }}
+        planOpen={planOpen}
+        onTogglePlan={() => onPlanOpen(!planOpen)}
+        onGoToClass={onGoToClass}
+      />
     </main>
+  );
+}
+
+type PanelProps = {
+  panelRef: Ref<HTMLElement>;
+  date: Date;
+  moved: boolean;
+  onBackToToday: () => void;
+  planOpen: boolean;
+  onTogglePlan: () => void;
+  onGoToClass: () => void;
+};
+
+/** What a picked day held. Today shows the plan; a past day shows what happened, read-only. */
+function DayPanel({ panelRef, date, moved, onBackToToday, planOpen, onTogglePlan, onGoToClass }: PanelProps) {
+  const store = useStore();
+  useNow(15_000);
+  const section = store.sectionByCode(PARTICIPANT.sectionCode);
+  const me = section?.participantIds.includes(PARTICIPANT.id) ? store.participantById(PARTICIPANT.id) : undefined;
+  const isToday = isSameDay(date, today);
+  const plan = section ? phasesFor(section).filter((p) => p.min > 0) : [];
+  const planText = plan.map((p) => `${p.label} ${p.min} min`).join(' · ');
+
+  if (isToday) {
+    const day = section ? nextClassDay(section, today) : undefined;
+    const classToday = !!day && isSameDay(day, today);
+    const now =
+      section && classToday && store.isLive(section.code)
+        ? phaseAt(section, Date.now() - store.liveSince[section.code])
+        : undefined;
+    return (
+      <section ref={panelRef} className="p-day is-today" aria-live="polite">
+        <div className="p-day__head">
+          <span className="p-day__tag">Today</span>
+          <h2 className="display p-day__title">{longDate(date)}</h2>
+        </div>
+        {!classToday && (
+          <p className="p-day__lead">
+            No class today.{' '}
+            {moved ? 'You moved today. Nice work!' : 'A walk or some stretching still counts. Tap "I moved today" when you do.'}
+          </p>
+        )}
+        {section && me && day ? (
+          <>
+            <p className="p-day__lead">
+              {classToday ? 'Class today: ' : `Your next class is ${longDate(day)}: `}
+              <b>{section.name}</b>, {section.time} – {addMinutes(section.time, section.lengthMin)} with {STAFF_LABEL} on
+              the video call.
+            </p>
+            {now && (
+              <div className="tp-live">
+                <b>● Class is on now · {now.phase.label}</b>
+                <button className="tp-live__go" onClick={onGoToClass}>
+                  Go to class
+                </button>
+              </div>
+            )}
+            {planOpen ? (
+              <TodayPlan section={section} me={me} now={now} />
+            ) : (
+              <>
+                <p className="p-day__note">{planText}.</p>
+                <ExerciseList rows={plannedRows(me)} compact />
+              </>
+            )}
+            <button className="p-day__action" aria-expanded={planOpen} onClick={onTogglePlan}>
+              {planOpen ? 'Show less' : 'See full plan'}
+            </button>
+          </>
+        ) : (
+          !section && <p className="p-day__lead">Once you're added to a class, its plan shows up here.</p>
+        )}
+      </section>
+    );
+  }
+
+  const record = dayRecord(date, section, me);
+  return (
+    <section ref={panelRef} className="p-day is-past" aria-live="polite">
+      <div className="p-day__head">
+        <span className="p-day__tag">Looking back</span>
+        <h2 className="display p-day__title">{longDate(date)}</h2>
+        <button className="p-day__back" onClick={onBackToToday}>
+          Back to today
+        </button>
+      </div>
+      {record.kind === 'class' && section && (
+        <>
+          <p className="p-day__lead">
+            ✓ You came to <b>{section.name}</b> · Session {record.session}. {planText}.
+          </p>
+          {me && record.log ? (
+            <ExerciseList rows={loggedRows(me.program, record.log)} compact />
+          ) : (
+            <p className="p-day__note">
+              This was with your earlier set of exercises, before {INSTRUCTOR.firstName} gave you new ones. Those aren't
+              shown here.
+            </p>
+          )}
+        </>
+      )}
+      {record.kind === 'missed-class' && (
+        <p className="p-day__lead">
+          There was class this day, but you didn't make it. That's okay. Every class is a fresh start.
+        </p>
+      )}
+      {record.kind === 'moved' && <p className="p-day__lead">✓ You moved this day. No class was on.</p>}
+      {record.kind === 'rest' && <p className="p-day__lead">A rest day. No class was on.</p>}
+      <p className="p-day__note">Past days can't be changed.</p>
+    </section>
   );
 }

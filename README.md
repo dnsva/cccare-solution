@@ -3,9 +3,9 @@
 A clickable prototype of the CCCare app, built with Vite, React and TypeScript. It has two views, switched from the bar at the top of the page:
 
 - **Staff (R.Kin):** sections, live heart rates against each participant's target zone, session phases, messages, and each participant's exercise program.
-- **Participant:** streak, "My program" for logging sets, reps and weight, and joining a live class.
+- **Participant:** streak calendar (today shows the class plan, with "See full plan" for the timeline and every exercise; tap a past day to see that class), and joining a live class. Participants don't log exercises: the R.Kin leads them on the video call.
 
-All data is demo data held in memory. Reloading the page resets it.
+All data is demo data held in memory. Reloading the page resets it, except the class chat. Chat goes through the laptop running `npm run dev`, so staff and participants on different devices see the same messages (see [Class chat](#class-chat)).
 
 ## Getting started
 
@@ -41,8 +41,23 @@ Other scripts:
 | `src/components/` | Shared components |
 | `src/styles/base.css` | Colors, fonts and shared styles |
 | `src/lib/liveDevices.tsx` | Receives live pulse-oximeter readings in the browser |
-| `server/deviceRelay.ts` | Dev-server endpoint the Arduino sends readings to |
+| `server/deviceRelay.ts` | Dev-server endpoints the Arduino and the chat send to, and the live stream pages listen on |
+| `server/chat.ts` | Chat message rules and storage on the dev server |
+| `src/lib/relayStream.ts` | The page's one live connection to the dev server, shared by sensor and chat |
 | `arduino/` | Arduino sketch (placeholder for now) |
+
+## Class chat
+
+Messages sync between every page connected to the same `npm run dev`: staff on a laptop, participants on phones on the same Wi-Fi, or two browser tabs.
+
+```
+page ──POST /api/chat──▶ laptop (npm run dev) ──live updates──▶ every open page
+```
+
+- Your own message shows **Sending…** until the laptop has it. If it can't get through, it shows **Not sent · Try again**.
+- A page that opens or reloads gets the whole chat history.
+- Messages are kept in memory only. Restarting the dev server clears every chat, on every device.
+- To see what the laptop has stored: `curl http://localhost:5173/api/chat`
 
 ## Live pulse oximeter
 

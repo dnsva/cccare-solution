@@ -90,6 +90,10 @@ export type SectionDetails = Pick<
 >;
 
 export type ChatMessage = {
+  /** Set on messages sent through the relay. Seed messages have none. */
+  id?: string;
+  /** Only on this device's own messages the server hasn't confirmed yet. */
+  status?: 'sending' | 'failed';
   who: string;
   staff?: boolean;
   announcement?: boolean;

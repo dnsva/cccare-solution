@@ -1,14 +1,11 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { DeviceReading } from '../types';
+import { subscribe, type RelayStatus } from './relayStream';
 
 /** A reading older than this means the sensor stopped sending. */
 export const LIVE_STALE_MS = 5000;
 /** How many bpm values to keep per device for the sparkline. */
 const HISTORY = 24;
-/** Wait before reconnecting when the relay can't be reached at all. */
-const RETRY_MS = 5000;
-
-export type RelayStatus = 'connecting' | 'connected' | 'unavailable';
 
 export type LiveDevices = {
   status: RelayStatus;
@@ -33,42 +30,30 @@ export function LiveDevicesProvider({ children }: { children: ReactNode }) {
   const [live, setLive] = useState<LiveDevices>(EMPTY);
 
   useEffect(() => {
-    let source: EventSource | null = null;
-    let retry: ReturnType<typeof setTimeout> | undefined;
-
-    const connect = () => {
-      source = new EventSource('/api/stream');
-      source.onopen = () => setLive((prev) => ({ ...prev, status: 'connected' }));
-      source.onerror = () => {
-        setLive((prev) => ({ ...prev, status: 'unavailable' }));
-        // EventSource retries dropped connections itself, but gives up if the server isn't a relay at all.
-        if (source?.readyState === EventSource.CLOSED) {
-          source.close();
-          retry = setTimeout(connect, RETRY_MS);
-        }
-      };
-      source.addEventListener('snapshot', (e) => {
-        const readings = (JSON.parse(e.data) as Incoming[]).map(toReading);
+    const onStatus = (status: RelayStatus) => setLive((prev) => (prev.status === status ? prev : { ...prev, status }));
+    const stopSnapshot = subscribe(
+      'snapshot',
+      (data) => {
+        const readings = (data as Incoming[]).map(toReading);
         setLive((prev) => ({ ...prev, devices: Object.fromEntries(readings.map((r) => [r.device, r])) }));
+      },
+      onStatus,
+    );
+    const stopReading = subscribe('reading', (data) => {
+      const r = toReading(data as Incoming);
+      setLive((prev) => {
+        const past = prev.history[r.device] ?? [];
+        const history = r.bpm == null ? past : [...past, r.bpm].slice(-HISTORY);
+        return {
+          ...prev,
+          devices: { ...prev.devices, [r.device]: r },
+          history: { ...prev.history, [r.device]: history },
+        };
       });
-      source.addEventListener('reading', (e) => {
-        const r = toReading(JSON.parse(e.data) as Incoming);
-        setLive((prev) => {
-          const past = prev.history[r.device] ?? [];
-          const history = r.bpm == null ? past : [...past, r.bpm].slice(-HISTORY);
-          return {
-            ...prev,
-            devices: { ...prev.devices, [r.device]: r },
-            history: { ...prev.history, [r.device]: history },
-          };
-        });
-      });
-    };
-
-    connect();
+    });
     return () => {
-      clearTimeout(retry);
-      source?.close();
+      stopSnapshot();
+      stopReading();
     };
   }, []);
 

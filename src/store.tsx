@@ -1,12 +1,29 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { defaultProgram, SEED_LIVE_MINUTES_AGO, SEED_PARTICIPANTS, SEED_SECTIONS, SEED_TYPES, seedChat } from './data';
+import { chatTime, fromRelay, newMessageId, sendToRelay, type IncomingChat, type OutgoingChat } from './lib/chatSync';
 import { phaseAt, phaseStartMs, targetZone } from './lib/dosage';
-import type { ChatMessage, ClassType, LogEntry, Participant, ProgramItem, Section, SectionDetails } from './types';
+import { subscribe } from './lib/relayStream';
+import type { ChatMessage, ClassType, Participant, ProgramItem, Section, SectionDetails } from './types';
 
 export type NewParticipant = { name: string; age: number; restingBpm: number; maxBpm?: number };
 export type HeartRateDetails = Pick<Participant, 'restingBpm' | 'maxBpm' | 'zonePct'>;
 
-/** Shared demo data both roles read and write. Lives in memory and resets on reload. */
+type ChatsBySection = Record<string, ChatMessage[]>;
+
+/** Adds a message to its section unless one with the same id is already there. */
+const withMessage = (prev: ChatsBySection, section: string, message: ChatMessage): ChatsBySection =>
+  prev[section]?.some((m) => m.id === message.id) ? prev : { ...prev, [section]: [...(prev[section] ?? []), message] };
+
+const withoutMessage = (prev: ChatsBySection, section: string, id: string): ChatsBySection =>
+  prev[section]?.some((m) => m.id === id) ? { ...prev, [section]: prev[section].filter((m) => m.id !== id) } : prev;
+
+const updateMessage = (prev: ChatsBySection, section: string, id: string, fn: (m: ChatMessage) => ChatMessage): ChatsBySection =>
+  prev[section]?.some((m) => m.id === id) ? { ...prev, [section]: prev[section].map((m) => (m.id === id ? fn(m) : m)) } : prev;
+
+/**
+ * Shared demo data both roles read and write. Lives in memory and resets on reload, except chat,
+ * which goes through the dev server so every device on the network sees the same messages.
+ */
 function useCccareState() {
   const [types, setTypes] = useState<ClassType[]>(SEED_TYPES);
   const [sections, setSections] = useState<Section[]>(SEED_SECTIONS);
@@ -16,7 +33,45 @@ function useCccareState() {
   const [liveSince, setLiveSince] = useState<Record<string, number>>(() =>
     Object.fromEntries(Object.entries(SEED_LIVE_MINUTES_AGO).map(([code, min]) => [code, Date.now() - min * 60_000])),
   );
-  const [chats, setChats] = useState<Record<string, ChatMessage[]>>({});
+  /** Messages the dev server has stored, the same on every device. */
+  const [syncedChats, setSyncedChats] = useState<ChatsBySection>({});
+  /** This device's messages still being sent, or that failed to send. */
+  const [outbox, setOutbox] = useState<ChatsBySection>({});
+
+  useEffect(() => {
+    // The server sends every stored message when the page connects (and reconnects), then each new one.
+    const stopSnapshot = subscribe('chat-snapshot', (data) => {
+      const next: ChatsBySection = {};
+      for (const { section, message } of (data as IncomingChat[]).map(fromRelay))
+        (next[section] ??= []).push(message);
+      setSyncedChats(next);
+      const stored = new Set(Object.values(next).flatMap((list) => list.map((m) => m.id)));
+      setOutbox((prev) =>
+        Object.fromEntries(Object.entries(prev).map(([code, list]) => [code, list.filter((m) => !stored.has(m.id))])),
+      );
+    });
+    const stopChat = subscribe('chat', (data) => {
+      const { section, message } = fromRelay(data as IncomingChat);
+      setSyncedChats((prev) => withMessage(prev, section, message));
+      setOutbox((prev) => withoutMessage(prev, section, message.id!));
+    });
+    return () => {
+      stopSnapshot();
+      stopChat();
+    };
+  }, []);
+
+  /** Sends an outbox message. On success it moves to the synced list, if the stream hasn't put it there already. */
+  const deliver = async (code: string, message: ChatMessage & { id: string }) => {
+    const { who, staff, announcement, text } = message;
+    const ok = await sendToRelay(code, message.id, { who, staff, announcement, text });
+    if (ok) {
+      setSyncedChats((prev) => withMessage(prev, code, { ...message, status: undefined }));
+      setOutbox((prev) => withoutMessage(prev, code, message.id));
+    } else {
+      setOutbox((prev) => updateMessage(prev, code, message.id, (m) => ({ ...m, status: 'failed' })));
+    }
+  };
 
   const sectionByCode = (code: string) => sections.find((s) => s.code === code);
   const typeById = (id: string) => types.find((t) => t.id === id);
@@ -67,7 +122,8 @@ function useCccareState() {
     deleteSection(code: string) {
       setSections((prev) => prev.filter((s) => s.code !== code));
       setLiveSince(({ [code]: _, ...rest }) => rest);
-      setChats(({ [code]: _, ...rest }) => rest);
+      setSyncedChats(({ [code]: _, ...rest }) => rest);
+      setOutbox(({ [code]: _, ...rest }) => rest);
     },
     addParticipant(code: string, details: NewParticipant) {
       const section = sectionByCode(code);
@@ -114,19 +170,23 @@ function useCccareState() {
     startNewSet(id: string, program: ProgramItem[], hr: HeartRateDetails) {
       updateParticipant(id, (p) => ({ ...p, ...hr, program, setStartedAt: p.sessionsDone }));
     },
-    logSession(id: string, entries: LogEntry[]) {
-      updateParticipant(id, (p) => ({
-        ...p,
-        sessionsDone: p.sessionsDone + 1,
-        logs: [...p.logs, { session: p.sessionsDone + 1, entries }],
-      }));
+    /** Seed messages, then what the server has stored, then this device's unsent messages. */
+    chatFor: (code: string): ChatMessage[] => [
+      ...seedChat(sectionByCode(code)),
+      ...(syncedChats[code] ?? []),
+      ...(outbox[code] ?? []),
+    ],
+    postMessage(code: string, message: OutgoingChat) {
+      const pending = { ...message, id: newMessageId(), time: chatTime(Date.now()), status: 'sending' as const };
+      setOutbox((prev) => withMessage(prev, code, pending));
+      void deliver(code, pending);
     },
-    chatFor: (code: string) => chats[code] ?? seedChat(sectionByCode(code)),
-    postMessage(code: string, message: Omit<ChatMessage, 'time'>) {
-      setChats((prev) => ({
-        ...prev,
-        [code]: [...(prev[code] ?? seedChat(sectionByCode(code))), { ...message, time: 'Just now' }],
-      }));
+    /** Tries a failed message again. The same id means the server stores it once even if the first try got through. */
+    retryMessage(code: string, id: string) {
+      const message = outbox[code]?.find((m) => m.id === id);
+      if (!message || message.status !== 'failed') return;
+      setOutbox((prev) => updateMessage(prev, code, id, (m) => ({ ...m, status: 'sending' })));
+      void deliver(code, { ...message, id });
     },
   };
 }
