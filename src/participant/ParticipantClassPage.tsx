@@ -85,7 +85,12 @@ export function ParticipantClassPage({ draft, onDraft, joined, onJoined, onOpenP
 
       <section className="p-chat">
         <h2 className="p-chat__head">Class chat</h2>
-        <ChatLog messages={store.chatFor(section.code)} viewer="participant" participantName={PARTICIPANT.name} />
+        <ChatLog
+          messages={store.chatFor(section.code)}
+          viewer="participant"
+          participantName={PARTICIPANT.name}
+          onRetry={(id) => store.retryMessage(section.code, id)}
+        />
         <div className="p-chat__composer">
           <div className="p-chat__quick">
             {QUICK_REPLIES.map((q) => (

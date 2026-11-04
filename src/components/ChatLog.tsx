@@ -6,10 +6,32 @@ type Props = {
   viewer: Role;
   /** Name the participant viewer posts as. */
   participantName?: string;
+  /** Resend a message that failed to send. */
+  onRetry?: (id: string) => void;
 };
 
 /** Message history, newest at the bottom. Uses column-reverse so it stays scrolled to the latest. */
-export function ChatLog({ messages, viewer, participantName }: Props) {
+export function ChatLog({ messages, viewer, participantName, onRetry }: Props) {
+  /** Time, or where this device's own message stands. */
+  const when = (m: ChatMessage) => {
+    if (m.status === 'sending') return <span className="chat-status">Sending…</span>;
+    if (m.status === 'failed')
+      return (
+        <span className="chat-status chat-status--failed">
+          Not sent
+          {onRetry && m.id && (
+            <>
+              {' · '}
+              <button className="chat-status__retry" onClick={() => onRetry(m.id!)}>
+                Try again
+              </button>
+            </>
+          )}
+        </span>
+      );
+    return m.time;
+  };
+
   return (
     <div className={`chat-log chat-log--${viewer}`}>
       {messages
@@ -18,17 +40,17 @@ export function ChatLog({ messages, viewer, participantName }: Props) {
           const name = mine ? 'You' : m.who + (m.staff ? ` · ${INSTRUCTOR.credential}` : '');
           if (m.announcement)
             return (
-              <div key={i} className="chat-ann">
+              <div key={m.id ?? i} className="chat-ann">
                 {viewer === 'instructor' ? (
                   <div className="chat-ann__meta">
                     <span className="chat-ann__tag">ANNOUNCEMENT</span>
                     <span>
-                      {name} · {m.time}
+                      {name} · {when(m)}
                     </span>
                   </div>
                 ) : (
                   <div className="chat-ann__meta">
-                    Announcement · {name} · {m.time}
+                    Announcement · {name} · {when(m)}
                   </div>
                 )}
                 <div className="chat-ann__text">{m.text}</div>
@@ -36,9 +58,9 @@ export function ChatLog({ messages, viewer, participantName }: Props) {
             );
           const tone = mine ? 'mine' : m.staff ? 'staff' : 'other';
           return (
-            <div key={i} className={`chat-msg chat-msg--${tone}`}>
+            <div key={m.id ?? i} className={`chat-msg chat-msg--${tone}${m.status ? ' chat-msg--' + m.status : ''}`}>
               <span className="chat-msg__name">
-                {name} · {m.time}
+                {name} · {when(m)}
               </span>
               <div className="chat-msg__bubble">{m.text}</div>
             </div>
