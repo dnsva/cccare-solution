@@ -1,6 +1,7 @@
 import type { HrStatus, Participant } from '../types';
 import { maxHrOf, targetZone, type PhaseId } from './dosage';
 import { firstName } from './format';
+import { isFresh, type LiveDevices } from './liveDevices';
 
 export type Reading = {
   id: string;
@@ -10,6 +11,10 @@ export type Reading = {
   status: HrStatus;
   statusText: string;
   bpm: number | null;
+  /** Blood oxygen %, only from a real sensor. */
+  spo2: number | null;
+  /** From a real sensor rather than the simulated bracelet. */
+  live: boolean;
   zone: { low: number; high: number };
   /** "98–112". */
   range: string;
@@ -50,32 +55,57 @@ function baseBpm(p: Participant, phase: PhaseId): number | undefined {
   return Math.round(p.restingBpm + (phase === 'strength' ? 0.35 : 0.3) * (maxHrOf(p) - p.restingBpm));
 }
 
-export function readHeartRates(participants: Participant[], tick: number, phase: PhaseId): Reading[] {
+export type LiveFeed = LiveDevices & { now: number };
+
+type Base = Pick<Reading, 'id' | 'name' | 'first' | 'age' | 'zone' | 'range'>;
+
+const offline = (base: Base, statusText: string, live: boolean): Reading => ({
+  ...base, status: 'off', statusText, bpm: null, spo2: null, live, flagged: false,
+  bar: { zoneFrom: 0, zoneTo: 0, marker: 0 }, spark: { points: '', bandY: 0, bandH: 0 },
+});
+
+/** A reading with a heart rate: the last value of `history` is now. Same zone rules for real and simulated. */
+function withBpm(base: Base, history: number[], spo2: number | null, phase: PhaseId, live: boolean): Reading {
+  const { zone } = base;
+  const bpm = history[history.length - 1];
+  // Above the zone is flagged in any phase; below it only matters during cardio.
+  const status: HrStatus = bpm > zone.high ? 'high' : phase === 'cardio' && bpm < zone.low ? 'low' : 'ok';
+  const statusText = status === 'high' ? 'Above target zone' : status === 'low' ? 'Below target zone' : OK_TEXT[phase];
+  // Right-align a short history, so a sensor that just started draws from the right edge.
+  const offset = SPARK_SAMPLES - history.length;
+  const points = history
+    .map((v, i) => `${(((i + offset) / (SPARK_SAMPLES - 1)) * SPARK_W).toFixed(1)},${sparkY(v).toFixed(1)}`)
+    .join(' ');
+  return {
+    ...base, status, statusText, bpm, spo2, live, flagged: status !== 'ok',
+    bar: { zoneFrom: scalePct(zone.low), zoneTo: scalePct(zone.high), marker: scalePct(bpm) },
+    spark: { points, bandY: sparkY(zone.high), bandH: sparkY(zone.low) - sparkY(zone.high) },
+  };
+}
+
+/**
+ * One reading per participant. Anyone with a real sensor (`deviceId`) reads from `live`;
+ * everyone else gets the simulated bracelet.
+ */
+export function readHeartRates(participants: Participant[], tick: number, phase: PhaseId, live?: LiveFeed): Reading[] {
   return participants.map((p) => {
     const zone = targetZone(p);
-    const base = { id: p.id, name: p.name, first: firstName(p.name), age: p.age, zone, range: `${zone.low}–${zone.high}` };
-    const center = baseBpm(p, phase);
-    if (center == null) {
-      return {
-        ...base, status: 'off', statusText: 'Bracelet offline', bpm: null, flagged: false,
-        bar: { zoneFrom: 0, zoneTo: 0, marker: 0 }, spark: { points: '', bandY: 0, bandH: 0 },
-      };
+    const base: Base = { id: p.id, name: p.name, first: firstName(p.name), age: p.age, zone, range: `${zone.low}–${zone.high}` };
+
+    if (p.deviceId) {
+      const r = live?.devices[p.deviceId];
+      if (!live || !isFresh(r, live.now)) return offline(base, 'Sensor not sending', true);
+      if (!r.finger || r.bpm == null) return offline(base, 'No finger on sensor', true);
+      const past = live.history[p.deviceId] ?? [];
+      const history = past[past.length - 1] === r.bpm ? past : [...past, r.bpm];
+      return withBpm(base, history.slice(-SPARK_SAMPLES), r.spo2, phase, true);
     }
+
+    const center = baseBpm(p, phase);
+    if (center == null) return offline(base, 'Bracelet offline', false);
     const seed = seedOf(p.id);
-    const bpm = simulate(center, seed, tick);
-    // Above the zone is flagged in any phase; below it only matters during cardio.
-    const status: HrStatus = bpm > zone.high ? 'high' : phase === 'cardio' && bpm < zone.low ? 'low' : 'ok';
-    const statusText = status === 'high' ? 'Above target zone' : status === 'low' ? 'Below target zone' : OK_TEXT[phase];
-    const points = Array.from({ length: SPARK_SAMPLES }, (_, i) => {
-      const x = (i / (SPARK_SAMPLES - 1)) * SPARK_W;
-      const y = sparkY(simulate(center, seed, tick - (SPARK_SAMPLES - 1) + i));
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    }).join(' ');
-    return {
-      ...base, status, statusText, bpm, flagged: status !== 'ok',
-      bar: { zoneFrom: scalePct(zone.low), zoneTo: scalePct(zone.high), marker: scalePct(bpm) },
-      spark: { points, bandY: sparkY(zone.high), bandH: sparkY(zone.low) - sparkY(zone.high) },
-    };
+    const history = Array.from({ length: SPARK_SAMPLES }, (_, i) => simulate(center, seed, tick - (SPARK_SAMPLES - 1) + i));
+    return withBpm(base, history, null, phase, false);
   });
 }
 

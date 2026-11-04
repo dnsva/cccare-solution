@@ -948,3 +948,8 @@
   background: var(--disabled);
   cursor: not-allowed;
 }
+
+.p-heart__spo2 {
+  font-weight: 700;
+  color: var(--ink-soft);
+}

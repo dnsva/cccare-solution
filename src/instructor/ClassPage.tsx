@@ -3,6 +3,7 @@ import { Segmented } from '../components/Segmented';
 import { phaseAt, strengthMin, zonePctText } from '../lib/dosage';
 import { daysText, formatClock, plural } from '../lib/format';
 import { checkInMessage, readHeartRates, type Reading } from '../lib/heartRate';
+import { isFresh, useLiveDevices } from '../lib/liveDevices';
 import { useNow } from '../lib/useNow';
 import { useStore } from '../store';
 import type { HrView, Section } from '../types';
@@ -37,15 +38,21 @@ type Props = {
 export function ClassPage({ section, ui, updateUi, onBack, onEdit }: Props) {
   const store = useStore();
   const now = useNow(READING_MS);
+  const sensors = useLiveDevices();
   const type = store.typeById(section.typeId);
-  const live = store.isLive(section.code);
+  const isLive = store.isLive(section.code);
   // Read the clock directly (useNow only drives re-renders) so "Next phase" shows the new phase right away.
-  const elapsed = live ? Date.now() - store.liveSince[section.code] : 0;
-  const phaseNow = live ? phaseAt(section, elapsed) : null;
+  const elapsed = isLive ? Date.now() - store.liveSince[section.code] : 0;
+  const phaseNow = isLive ? phaseAt(section, elapsed) : null;
   const roster = store.rosterFor(section);
-  const readings = readHeartRates(roster, Math.floor(now / READING_MS), phaseNow?.phase.id ?? 'cardio');
+  const readings = readHeartRates(roster, Math.floor(now / READING_MS), phaseNow?.phase.id ?? 'cardio', {
+    ...sensors,
+    now: Date.now(),
+  });
+  const sensorIds = roster.flatMap((p) => (p.deviceId ? [p.deviceId] : []));
+  const sensorSending = sensorIds.some((id) => isFresh(sensors.devices[id], Date.now()));
   const hasParticipants = readings.length > 0;
-  const showHr = ui.tab === 'hr' && live && hasParticipants;
+  const showHr = ui.tab === 'hr' && isLive && hasParticipants;
 
   // Keyed by status too, so a dismissed "above zone" alert comes back if they later drop below zone.
   const dismissKey = (r: Reading) => `${section.code}:${r.id}:${r.status}`;
@@ -81,7 +88,7 @@ export function ClassPage({ section, ui, updateUi, onBack, onEdit }: Props) {
               ·
             </span>
             <span>{plural(roster.length, 'participant')}</span>
-            {live && (
+            {isLive && (
               <span className="class-head__live">● Live · {formatClock(elapsed)}</span>
             )}
           </div>
@@ -95,10 +102,10 @@ export function ClassPage({ section, ui, updateUi, onBack, onEdit }: Props) {
             Invite code <b>{section.code}</b>
           </span>
           <button
-            className={'live-toggle' + (live ? '' : ' live-toggle--start')}
-            onClick={() => store.setLive(section.code, !live)}
+            className={'live-toggle' + (isLive ? '' : ' live-toggle--start')}
+            onClick={() => store.setLive(section.code, !isLive)}
           >
-            {live ? 'End class' : 'Start class'}
+            {isLive ? 'End class' : 'Start class'}
           </button>
         </div>
       </div>
@@ -134,7 +141,7 @@ export function ClassPage({ section, ui, updateUi, onBack, onEdit }: Props) {
         )}
       </div>
 
-      {ui.tab === 'hr' && !live && (
+      {ui.tab === 'hr' && !isLive && (
         <div className="i-empty">
           <div className="display i-empty__title">Class isn't live</div>
           <div className="i-empty__body">
@@ -147,7 +154,7 @@ export function ClassPage({ section, ui, updateUi, onBack, onEdit }: Props) {
         </div>
       )}
 
-      {ui.tab === 'hr' && live && !hasParticipants && (
+      {ui.tab === 'hr' && isLive && !hasParticipants && (
         <div className="i-empty">
           <div className="display i-empty__title">No participants yet</div>
           <div className="i-empty__body">
@@ -170,6 +177,13 @@ export function ClassPage({ section, ui, updateUi, onBack, onEdit }: Props) {
           {ui.view === 'tiles' && <HrTiles readings={readings} />}
           {ui.view === 'list' && <HrList readings={readings} onMessage={messageParticipant} />}
           {ui.view === 'panel' && <HrPanel readings={readings} onMessage={messageParticipant} />}
+          {sensorIds.length > 0 && (
+            <div className={'hr-relay' + (sensorSending ? ' hr-relay--ok' : ' hr-relay--off')} role="status">
+              {sensorSending
+                ? '● Live sensor connected'
+                : 'No sensor sending. Check the Arduino is on and on the same Wi-Fi as this laptop.'}
+            </div>
+          )}
           <div className="i-muted hr__note">
             Blue band = target zone, {zonePctText()} of heart-rate reserve unless prescribed otherwise. It comes from each
             participant's resting and max heart rate (graded exercise test, or the age estimate until they've had one).

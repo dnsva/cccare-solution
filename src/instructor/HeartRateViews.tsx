@@ -2,6 +2,9 @@ import { alertText, SPARK_H, SPARK_W, type Reading } from '../lib/heartRate';
 
 type MessageProps = { readings: Reading[]; onMessage: (r: Reading) => void };
 
+const LiveBadge = ({ r }: { r: Reading }) => (r.live ? <span className="live-badge">Live</span> : null);
+const spo2Text = (r: Reading) => (r.spo2 != null ? `SpO₂ ${r.spo2}%` : '');
+
 export function HrAlerts({ readings, onMessage, onDismiss }: MessageProps & { onDismiss: (r: Reading) => void }) {
   return readings.map((r) => (
     <div key={r.id} className={`hr-alert hr-alert--${r.status}`} role="alert">
@@ -22,12 +25,16 @@ export function HrTiles({ readings }: { readings: Reading[] }) {
       {readings.map((r) => (
         <div key={r.id} className={`hr-tile hr-${r.status}`}>
           <div className="hr-tile__head">
-            <b>{r.name}</b>
+            <b>
+              {r.name}
+              <LiveBadge r={r} />
+            </b>
             <span className="i-muted">age {r.age}</span>
           </div>
           <div className="hr-tile__reading">
             <span className="hr-tile__bpm">{r.bpm ?? '—'}</span>
             <span className="i-muted">bpm</span>
+            {r.spo2 != null && <span className="hr-tile__spo2">{spo2Text(r)}</span>}
           </div>
           <div className="hr-range">
             {r.bpm != null && (
@@ -57,7 +64,7 @@ export function HrList({ readings, onMessage }: MessageProps) {
   const groups: [string, Reading[]][] = [
     ['Check on now', readings.filter((r) => r.flagged)],
     ['All good', readings.filter((r) => r.status === 'ok')],
-    ['Bracelet offline', readings.filter((r) => r.status === 'off')],
+    ['Offline', readings.filter((r) => r.status === 'off')],
   ];
   return (
     <div className="hr-list">
@@ -72,9 +79,13 @@ export function HrList({ readings, onMessage }: MessageProps) {
               <div key={r.id} className={`hr-row hr-${r.status}`}>
                 <span className="hr-dot" />
                 <div>
-                  <b className="hr-row__name">{r.name}</b>
+                  <b className="hr-row__name">
+                    {r.name}
+                    <LiveBadge r={r} />
+                  </b>
                   <div className="i-muted hr-row__sub">
                     age {r.age} · {r.statusText}
+                    {r.spo2 != null && ` · ${spo2Text(r)}`}
                   </div>
                 </div>
                 <svg className="hr-row__spark" width={SPARK_W} height={SPARK_H} aria-hidden="true">
@@ -108,9 +119,13 @@ export function HrPanel({ readings, onMessage }: MessageProps) {
           <div key={r.id} className={`hr-flag hr-${r.status}`}>
             <div className="hr-flag__head">
               <div>
-                <b className="hr-flag__name">{r.name}</b>
+                <b className="hr-flag__name">
+                  {r.name}
+                  <LiveBadge r={r} />
+                </b>
                 <div className="hr-flag__status">
                   {r.statusText} · {r.range}
+                  {r.spo2 != null && ` · ${spo2Text(r)}`}
                 </div>
               </div>
               <span className="hr-flag__bpm">{r.bpm}</span>
@@ -124,11 +139,15 @@ export function HrPanel({ readings, onMessage }: MessageProps) {
             <span className="hr-ok-row__name">
               <span className="hr-dot hr-dot--sm" />
               {r.name}
+              <LiveBadge r={r} />
             </span>
-            <b className="hr-ok-row__bpm">{r.bpm}</b>
+            <b className="hr-ok-row__bpm">
+              {r.bpm}
+              {r.spo2 != null && <span className="hr-ok-row__spo2"> · {r.spo2}%</span>}
+            </b>
           </div>
         ))}
-        <div className="i-muted hr-panel__offline">{offline.length ? `Bracelet offline: ${offline.join(', ')}` : ''}</div>
+        <div className="i-muted hr-panel__offline">{offline.length ? `Offline: ${offline.join(', ')}` : ''}</div>
       </aside>
     </div>
   );

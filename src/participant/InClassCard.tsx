@@ -3,6 +3,7 @@ import { STAFF_LABEL } from '../data';
 import { phaseAt, type PhaseId } from '../lib/dosage';
 import { formatClock } from '../lib/format';
 import { readHeartRates, type Reading } from '../lib/heartRate';
+import { useLiveDevices } from '../lib/liveDevices';
 import { useNow } from '../lib/useNow';
 import { useStore } from '../store';
 import type { Participant, Section } from '../types';
@@ -11,7 +12,11 @@ const READING_MS = 1500;
 
 /** What the heart card says, by phase. Above the zone always comes first. */
 function heartMessage(r: Reading, phase: PhaseId): string {
-  if (r.status === 'off') return "Your bracelet isn't connected. Check that it's on and charged.";
+  if (r.status === 'off') {
+    if (!r.live) return "Your bracelet isn't connected. Check that it's on and charged.";
+    if (r.statusText === 'No finger on sensor') return 'Put your finger back on the sensor.';
+    return "Your sensor isn't sending. Check it's on and connected.";
+  }
   if (r.status === 'high') return 'Above your zone. Lower the speed, incline or resistance and ease off a little.';
   if (r.status === 'low') return 'Below your zone. If you feel okay, raise the speed, incline or resistance a little.';
   if (phase === 'warmup') return `Warm-up: start easy. Cardio aims for ${r.range} bpm.`;
@@ -35,10 +40,11 @@ type Props = { section: Section; me: Participant; onLeave: () => void; onOpenPro
 export function InClassCard({ section, me, onLeave, onOpenProgram }: Props) {
   const store = useStore();
   const now = useNow(READING_MS);
+  const sensors = useLiveDevices();
   const elapsed = Date.now() - store.liveSince[section.code];
   const phaseNow = phaseAt(section, elapsed);
   const phase = phaseNow.phase.id;
-  const reading = readHeartRates([me], Math.floor(now / READING_MS), phase)[0];
+  const reading = readHeartRates([me], Math.floor(now / READING_MS), phase, { ...sensors, now: Date.now() })[0];
 
   return (
     <section className="p-live">
@@ -92,6 +98,7 @@ export function InClassCard({ section, me, onLeave, onOpenProgram }: Props) {
               <div className="p-heart__marker" style={{ left: `${reading.bar.marker}%` }} />
             </div>
           )}
+          {reading.spo2 != null && <span className="p-heart__spo2">Blood oxygen {reading.spo2}%</span>}
           <b className="p-heart__message">{heartMessage(reading, phase)}</b>
           <span className="p-heart__range">Your cardio target zone: {reading.range} bpm</span>
           <span className="p-heart__help">Need help with the machine? Ask a student volunteer.</span>

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { estimatedMaxHr, newExercisesDue, readyForMoreLoad, targetZone } from '../lib/dosage';
 import { plural } from '../lib/format';
+import { isFresh, useLiveDevices } from '../lib/liveDevices';
+import { useNow } from '../lib/useNow';
 import { useStore } from '../store';
 import type { Section } from '../types';
 import { ProgramModal } from './ProgramModal';
@@ -20,6 +22,10 @@ const isIntIn = (v: number, min: number, max: number) => Number.isInteger(v) && 
 export function ParticipantsPanel({ section }: { section: Section }) {
   const store = useStore();
   const roster = store.rosterFor(section);
+  const sensors = useLiveDevices();
+  // Re-render every couple of seconds so a sensor that stops sending drops off the list.
+  const now = useNow(2000);
+  const sending = Object.values(sensors.devices).filter((r) => isFresh(r, now));
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
@@ -149,7 +155,14 @@ export function ParticipantsPanel({ section }: { section: Section }) {
                     <button className="btn btn--primary roster__btn" onClick={() => setProgramFor(p.id)}>
                       Program
                     </button>
-                    {paired ? (
+                    {p.deviceId ? (
+                      <>
+                        <span className="roster__pill roster__pill--live">● Live sensor {p.deviceId}</span>
+                        <button className="btn btn--outline roster__btn" onClick={() => store.assignDevice(p.id, undefined)}>
+                          Unassign
+                        </button>
+                      </>
+                    ) : paired ? (
                       <span className="roster__pill roster__pill--ok">● Bracelet paired</span>
                     ) : (
                       <>
@@ -159,6 +172,17 @@ export function ParticipantsPanel({ section }: { section: Section }) {
                         </button>
                       </>
                     )}
+                    {!p.deviceId &&
+                      sending.map((r) => (
+                        <button
+                          key={r.device}
+                          className="btn btn--outline roster__btn"
+                          onClick={() => store.assignDevice(p.id, r.device)}
+                        >
+                          Use live sensor {r.device}
+                          {r.bpm != null && ` · ${r.bpm} bpm`}
+                        </button>
+                      ))}
                     <button className="roster__remove" onClick={() => setConfirmRemove(p.id)} aria-label={`Remove ${p.name}`}>
                       Remove
                     </button>
@@ -171,6 +195,10 @@ export function ParticipantsPanel({ section }: { section: Section }) {
       )}
       <div className="i-muted roster__foot">
         Participants can also join on their own with invite code <b className="mono">{section.code}</b>.
+        {sensors.status === 'connected' &&
+          (sending.length
+            ? ` Live sensor ${sending.map((r) => r.device).join(', ')} is sending: use it on a participant to show their real heart rate.`
+            : ' Live sensor: turn it on and it appears here once it sends a reading.')}
       </div>
 
       {programParticipant && <ProgramModal participant={programParticipant} onClose={() => setProgramFor(null)} />}

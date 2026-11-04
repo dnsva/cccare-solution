@@ -1539,3 +1539,55 @@
     grid-column: 1 / -1;
   }
 }
+
+/* ---------- Live pulse oximeter ---------- */
+
+.live-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: var(--success-ink);
+  color: #fff;
+  font: 700 11px/1 var(--font-body);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+.hr-tile__spo2 {
+  margin-left: auto;
+  font-weight: 700;
+  color: var(--st-fc);
+}
+
+.hr-ok-row__spo2 {
+  font: 400 14px var(--font-body);
+  color: var(--muted);
+}
+
+.hr-relay {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.hr-relay--ok {
+  color: var(--success-ink);
+}
+
+.hr-relay--off {
+  color: var(--danger);
+}
+
+.roster__pill--live {
+  color: #fff;
+  background: var(--success-ink);
+}
+
+.instructor--dark .hr-relay--ok {
+  color: oklch(0.8 0.14 150);
+}
+
+.instructor--dark .hr-relay--off {
+  color: oklch(0.78 0.14 28);
+}

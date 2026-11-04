@@ -94,6 +94,18 @@ function useCccareState() {
         return { ...p, braceletBaseBpm: Math.round((zone.low + zone.high) / 2) + Math.floor(Math.random() * 5) - 2 };
       });
     },
+    /** Give a participant the real pulse oximeter (or take it back). A device belongs to one person at a time. */
+    assignDevice(id: string, deviceId: string | undefined) {
+      setParticipants((prev) =>
+        Object.fromEntries(
+          Object.entries(prev).map(([pid, p]) => {
+            if (pid === id) return [pid, { ...p, deviceId }];
+            if (deviceId && p.deviceId === deviceId) return [pid, { ...p, deviceId: undefined }];
+            return [pid, p];
+          }),
+        ),
+      );
+    },
     /** Staff save from the program editor: heart-rate prescription and exercises together. */
     saveProgram(id: string, hr: HeartRateDetails, program: ProgramItem[]) {
       updateParticipant(id, (p) => ({ ...p, ...hr, program }));

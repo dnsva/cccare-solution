@@ -59,6 +59,8 @@ export type Participant = {
   zonePct?: ZonePct;
   /** Demo bpm the bracelet simulates around during cardio. Missing until a bracelet is paired. */
   braceletBaseBpm?: number;
+  /** Real pulse oximeter assigned by staff. When set, it replaces the simulated bracelet. */
+  deviceId?: string;
   program: ProgramItem[];
   sessionsDone: number;
   /** `sessionsDone` when the current exercise set started. */
@@ -98,3 +100,14 @@ export type ChatMessage = {
 export type HrView = 'tiles' | 'list' | 'panel';
 
 export type HrStatus = 'high' | 'low' | 'ok' | 'off';
+
+/** Latest reading from a real pulse oximeter, via the dev-server relay. */
+export type DeviceReading = {
+  device: string;
+  /** Null when there's no finger on the sensor. */
+  bpm: number | null;
+  spo2: number | null;
+  finger: boolean;
+  /** When it was taken, on this browser's clock (ms). */
+  at: number;
+};
