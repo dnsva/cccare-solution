@@ -1,9 +1,11 @@
-import { useRef, useState, type Ref } from 'react';
-import { INSTRUCTOR, PARTICIPANT, STREAK } from '../data';
-import { phasesFor } from '../lib/dosage';
+import { useEffect, useRef, type Ref } from 'react';
+import { INSTRUCTOR, PARTICIPANT, STAFF_LABEL, STREAK } from '../data';
+import { phaseAt, phasesFor } from '../lib/dosage';
+import { useNow } from '../lib/useNow';
 import { useStore } from '../store';
 import { ExerciseList } from './ExerciseList';
-import { dayRecord, isClassDay, isSameDay, loggedRows, movedOn, plannedRows, today } from './history';
+import { addMinutes, dayRecord, isSameDay, loggedRows, movedOn, nextClassDay, plannedRows, today } from './history';
+import { TodayPlan } from './TodayPlan';
 
 type Props = {
   movedToday: boolean;
@@ -11,7 +13,13 @@ type Props = {
   /** 0-based month shown in the calendar, in the streak's year. */
   month: number;
   onMonth: (month: number) => void;
-  onOpenPlan: () => void;
+  /** The calendar day whose details show below it. */
+  picked: Date;
+  onPick: (date: Date) => void;
+  /** Whether today's panel shows the full class plan. */
+  planOpen: boolean;
+  onPlanOpen: (open: boolean) => void;
+  onGoToClass: () => void;
 };
 
 const WEEKDAYS = 'SMTWTFS'.split('');
@@ -21,15 +29,24 @@ const lastMonth = today.getMonth();
 
 const longDate = (d: Date) => d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
-export function StreakPage({ movedToday, onToggleToday, month, onMonth, onOpenPlan }: Props) {
-  /** The calendar day whose details show below it. Today unless a past day is picked. */
-  const [picked, setPicked] = useState<Date>(today);
+export function StreakPage(props: Props) {
+  const { movedToday, onToggleToday, month, onMonth, picked, onPick, planOpen, onPlanOpen, onGoToClass } = props;
   const panelRef = useRef<HTMLElement>(null);
   /** On a phone the panel sits below the calendar, so bring it into view. */
+  const showPanel = (block: ScrollLogicalPosition = 'nearest') =>
+    requestAnimationFrame(() => panelRef.current?.scrollIntoView({ behavior: 'smooth', block }));
   const pick = (date: Date) => {
-    setPicked(date);
-    requestAnimationFrame(() => panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
+    onPick(date);
+    showPanel();
   };
+
+  // Opening or closing the full plan (here, or from class) changes the panel's height a lot. An open plan is
+  // taller than the screen, so show it from the top.
+  const firstRender = useRef(true);
+  useEffect(() => {
+    if (firstRender.current) firstRender.current = false;
+    else showPanel(planOpen ? 'start' : 'nearest');
+  }, [planOpen]);
   const moved = (date: Date) => movedOn(date, movedToday);
 
   const week = WEEKDAYS.map((letter, i) => {
@@ -147,10 +164,12 @@ export function StreakPage({ movedToday, onToggleToday, month, onMonth, onOpenPl
         date={picked}
         moved={moved(picked)}
         onBackToToday={() => {
-          setPicked(today);
+          onPick(today);
           onMonth(today.getMonth());
         }}
-        onOpenPlan={onOpenPlan}
+        planOpen={planOpen}
+        onTogglePlan={() => onPlanOpen(!planOpen)}
+        onGoToClass={onGoToClass}
       />
     </main>
   );
@@ -161,12 +180,15 @@ type PanelProps = {
   date: Date;
   moved: boolean;
   onBackToToday: () => void;
-  onOpenPlan: () => void;
+  planOpen: boolean;
+  onTogglePlan: () => void;
+  onGoToClass: () => void;
 };
 
 /** What a picked day held. Today shows the plan; a past day shows what happened, read-only. */
-function DayPanel({ panelRef, date, moved, onBackToToday, onOpenPlan }: PanelProps) {
+function DayPanel({ panelRef, date, moved, onBackToToday, planOpen, onTogglePlan, onGoToClass }: PanelProps) {
   const store = useStore();
+  useNow(15_000);
   const section = store.sectionByCode(PARTICIPANT.sectionCode);
   const me = section?.participantIds.includes(PARTICIPANT.id) ? store.participantById(PARTICIPANT.id) : undefined;
   const isToday = isSameDay(date, today);
@@ -174,27 +196,53 @@ function DayPanel({ panelRef, date, moved, onBackToToday, onOpenPlan }: PanelPro
   const planText = plan.map((p) => `${p.label} ${p.min} min`).join(' · ');
 
   if (isToday) {
-    const classToday = !!section && isClassDay(section, date);
+    const day = section ? nextClassDay(section, today) : undefined;
+    const classToday = !!day && isSameDay(day, today);
+    const now =
+      section && classToday && store.isLive(section.code)
+        ? phaseAt(section, Date.now() - store.liveSince[section.code])
+        : undefined;
     return (
       <section ref={panelRef} className="p-day is-today" aria-live="polite">
         <div className="p-day__head">
           <span className="p-day__tag">Today</span>
           <h2 className="display p-day__title">{longDate(date)}</h2>
         </div>
-        {classToday && section ? (
+        {!classToday && (
+          <p className="p-day__lead">
+            No class today.{' '}
+            {moved ? 'You moved today. Nice work!' : 'A walk or some stretching still counts. Tap "I moved today" when you do.'}
+          </p>
+        )}
+        {section && me && day ? (
           <>
             <p className="p-day__lead">
-              <b>{section.name}</b> at {section.time}. {planText}.
+              {classToday ? 'Class today: ' : `Your next class is ${longDate(day)}: `}
+              <b>{section.name}</b>, {section.time} – {addMinutes(section.time, section.lengthMin)} with {STAFF_LABEL} on
+              the video call.
             </p>
-            {me && <ExerciseList rows={plannedRows(me)} compact />}
-            <button className="p-day__action" onClick={onOpenPlan}>
-              See today's full plan
+            {now && (
+              <div className="tp-live">
+                <b>● Class is on now · {now.phase.label}</b>
+                <button className="tp-live__go" onClick={onGoToClass}>
+                  Go to class
+                </button>
+              </div>
+            )}
+            {planOpen ? (
+              <TodayPlan section={section} me={me} now={now} />
+            ) : (
+              <>
+                <p className="p-day__note">{planText}.</p>
+                <ExerciseList rows={plannedRows(me)} compact />
+              </>
+            )}
+            <button className="p-day__action" aria-expanded={planOpen} onClick={onTogglePlan}>
+              {planOpen ? 'Show less' : 'See full plan'}
             </button>
           </>
         ) : (
-          <p className="p-day__lead">
-            No class today. {moved ? 'You moved today. Nice work!' : 'A walk or some stretching still counts. Tap "I moved today" when you do.'}
-          </p>
+          !section && <p className="p-day__lead">Once you're added to a class, its plan shows up here.</p>
         )}
       </section>
     );

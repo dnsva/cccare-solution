@@ -3,14 +3,12 @@ import { PARTICIPANT_TEXT_SIZE } from '../config';
 import { PARTICIPANT, STREAK } from '../data';
 import { ParticipantClassPage } from './ParticipantClassPage';
 import { StreakPage } from './StreakPage';
-import { TodayPage } from './TodayPage';
 import './participant.css';
 
-type Tab = 'streak' | 'today' | 'class';
+type Tab = 'streak' | 'class';
 
 const TABS: [Tab, string][] = [
   ['streak', 'My streak'],
-  ['today', "Today's plan"],
   ['class', 'My class'],
 ];
 
@@ -20,6 +18,16 @@ export function ParticipantApp() {
   const [month, setMonth] = useState(STREAK.today.getMonth());
   const [draft, setDraft] = useState('');
   const [joined, setJoined] = useState(false);
+  const [picked, setPicked] = useState(STREAK.today);
+  const [planOpen, setPlanOpen] = useState(false);
+
+  /** From class: show today's full plan on the streak page. */
+  const openPlan = () => {
+    setPicked(STREAK.today);
+    setMonth(STREAK.today.getMonth());
+    setPlanOpen(true);
+    setTab('streak');
+  };
 
   return (
     <div className="participant" style={{ fontSize: PARTICIPANT_TEXT_SIZE }}>
@@ -45,11 +53,12 @@ export function ParticipantApp() {
           onToggleToday={() => setMovedToday((v) => !v)}
           month={month}
           onMonth={setMonth}
-          onOpenPlan={() => setTab('today')}
+          picked={picked}
+          onPick={setPicked}
+          planOpen={planOpen}
+          onPlanOpen={setPlanOpen}
+          onGoToClass={() => setTab('class')}
         />
-      </div>
-      <div hidden={tab !== 'today'}>
-        <TodayPage onGoToClass={() => setTab('class')} />
       </div>
       <div hidden={tab !== 'class'}>
         <ParticipantClassPage
@@ -57,7 +66,7 @@ export function ParticipantApp() {
           onDraft={setDraft}
           joined={joined}
           onJoined={setJoined}
-          onOpenPlan={() => setTab('today')}
+          onOpenPlan={openPlan}
         />
       </div>
     </div>

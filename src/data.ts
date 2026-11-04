@@ -183,7 +183,7 @@ export const SEED_LIVE_MINUTES_AGO: Record<string, number> = { 'BUA-4821': 12 };
 export function seedChat(section: Section | undefined): ChatMessage[] {
   if (section?.code === 'BUA-4821')
     return [
-      { who: INSTRUCTOR.name, staff: true, announcement: true, time: 'Mon 9:00 AM', text: "Welcome to week 6! Check Today's plan before class to see your exercises. I'll lead them on the call." },
+      { who: INSTRUCTOR.name, staff: true, announcement: true, time: 'Mon 9:00 AM', text: "Welcome to week 6! Tap today on your streak calendar to see your exercises. I'll lead them on the call." },
       { who: 'June K.', time: 'Mon 9:20 AM', text: 'Can I use the recumbent bike instead of the treadmill today?' },
       { who: INSTRUCTOR.name, staff: true, time: 'Mon 9:31 AM', text: 'Yes! The bike is perfect, June. Just keep it in your target zone.' },
       { who: 'Harold B.', time: '1:48 PM', text: 'Running a minute late, save me a treadmill' },

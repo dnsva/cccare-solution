@@ -3,7 +3,7 @@
 A clickable prototype of the CCCare app, built with Vite, React and TypeScript. It has two views, switched from the bar at the top of the page:
 
 - **Staff (R.Kin):** sections, live heart rates against each participant's target zone, session phases, messages, and each participant's exercise program.
-- **Participant:** streak calendar (tap a past day to see that class and its exercises), "Today's plan" previewing the next class and its exercises, and joining a live class. Participants don't log exercises: the R.Kin leads them on the video call.
+- **Participant:** streak calendar (today shows the class plan, with "See full plan" for the timeline and every exercise; tap a past day to see that class), and joining a live class. Participants don't log exercises: the R.Kin leads them on the video call.
 
 All data is demo data held in memory. Reloading the page resets it, except the class chat. Chat goes through the laptop running `npm run dev`, so staff and participants on different devices see the same messages (see [Class chat](#class-chat)).
 
