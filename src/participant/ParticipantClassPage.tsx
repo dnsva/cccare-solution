@@ -22,7 +22,7 @@ export function ParticipantClassPage({ draft, onDraft }: Props) {
       <main className="p-class">
         <section className="p-empty">
           <h1 className="display p-empty__title">You're not in a class yet</h1>
-          <p>Ask your {INSTRUCTOR.credential} for an invite code. Once you're added, your class and its chat show up here.</p>
+          <p>Ask your {INSTRUCTOR.credential} to be added to a class. Once you're added, your class and its chat show up here.</p>
         </section>
       </main>
     );

@@ -110,8 +110,7 @@ export function ParticipantsPanel({ section }: { section: Section }) {
 
       {roster.length === 0 ? (
         <div className="roster__empty">
-          No participants yet. Add them here, or share invite code <b className="mono">{section.code}</b> so they can join
-          themselves.
+          No participants yet. Add them here.
         </div>
       ) : (
         <ul className="roster__list">
