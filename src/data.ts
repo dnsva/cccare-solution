@@ -1,3 +1,4 @@
+import { THINGSPEAK_DEVICE } from './config';
 import { kindOf } from './lib/dosage';
 import type { ChatMessage, ClassType, Effort, FunctionalCategory, Participant, ProgramItem, Section, SessionLog } from './types';
 
@@ -5,11 +6,11 @@ import type { ChatMessage, ClassType, Effort, FunctionalCategory, Participant, P
 export const PASTELS = ['#DCE3F5', '#D9F0E1', '#F8E6CC', '#F2DDEB', '#E6E0F5', '#FBE3DC', '#DDEFF0', '#EEF0D5'];
 
 /** The CEP or R.Kin who prescribes programs and runs class. */
-export const INSTRUCTOR = { name: 'Priya S.', firstName: 'Priya', initials: 'PS', credential: 'R.Kin' };
+export const INSTRUCTOR = { name: 'Instructor Goose', firstName: 'Instructor Goose', initials: 'IG', credential: 'R.Kin' };
 
 export const STAFF_LABEL = `${INSTRUCTOR.firstName} · ${INSTRUCTOR.credential}`;
 
-export const PARTICIPANT = { id: 'p3', name: 'Margaret L.', firstName: 'Margaret', initials: 'ML', sectionCode: 'BUA-4821' };
+export const PARTICIPANT = { id: 'p1', name: 'Goosette', firstName: 'Goosette', initials: 'G', sectionCode: 'GSM-3317' };
 
 /** Class types group sections by baseline fitness. */
 export const SEED_TYPES: ClassType[] = [
@@ -135,31 +136,27 @@ function seedLogs(program: ProgramItem[], from: number, to: number, readyId?: st
   return logs;
 }
 
-// id, name, age, resting bpm, graded-test max bpm, bracelet cardio bpm, effort, sessions done, sessions in current set
-type Seed = [string, string, number, number, number | undefined, number | undefined, Effort, number, number];
+// id, name, age, resting bpm, graded-test max bpm, effort, sessions done, sessions in current set
+type Seed = [string, string, number, number, number | undefined, Effort, number, number];
 
-// Harold runs above his zone and Ed below his, so the live class shows both kinds of alert.
-// Grace and Ken haven't paired a bracelet; Tom and Grace haven't done a graded test yet.
+// Goosette (the participant view) wears the real pulse oximeter; everyone else has no live reading.
+// Name 4 and Name 5 haven't done a graded test yet.
 const SEEDS: Seed[] = [
-  ['p1', 'Harold B.', 78, 72, 138, 120, 2, 18, 6],
-  ['p2', 'June K.', 71, 70, 145, 108, 2, 12, 12],
-  ['p3', 'Margaret L.', 74, 66, 140, 103, 2, 21, 9],
-  ['p4', 'Ed P.', 82, 68, 130, 84, 1, 7, 7],
-  ['p5', 'Rosa M.', 69, 64, 150, 108, 3, 30, 6],
-  ['p6', 'Tom S.', 76, 70, undefined, 106, 2, 10, 10],
-  ['p7', 'Grace W.', 80, 72, undefined, undefined, 1, 0, 0],
-  ['p8', 'Ken A.', 73, 68, 142, undefined, 1, 2, 2],
-  ['p9', 'Lou D.', 77, 74, 136, 105, 2, 15, 3],
-  ['p10', 'Ana R.', 70, 62, 148, 105, 3, 26, 2],
-  ['p11', 'Bill T.', 84, 70, 128, 98, 1, 9, 9],
+  ['p1', 'Goosette', 74, 66, 140, 2, 21, 9],
+  ['p2', 'Name 1', 78, 72, 138, 2, 18, 6],
+  ['p3', 'Name 2', 71, 70, 145, 2, 12, 12],
+  ['p4', 'Name 3', 82, 68, 130, 1, 7, 7],
+  ['p5', 'Name 4', 76, 70, undefined, 2, 10, 10],
+  ['p6', 'Name 5', 80, 72, undefined, 1, 0, 0],
 ];
 
 export const SEED_PARTICIPANTS: Record<string, Participant> = Object.fromEntries(
-  SEEDS.map(([id, name, age, restingBpm, maxBpm, braceletBaseBpm, effort, sessionsDone, inSet]) => {
+  SEEDS.map(([id, name, age, restingBpm, maxBpm, effort, sessionsDone, inSet]) => {
     const program = defaultProgram(effort);
     const setStartedAt = sessionsDone - inSet;
     const logs = seedLogs(program, setStartedAt, sessionsDone, id === PARTICIPANT.id ? 'squat' : undefined);
-    return [id, { id, name, age, restingBpm, maxBpm, braceletBaseBpm, program, sessionsDone, setStartedAt, logs }];
+    const deviceId = id === PARTICIPANT.id ? THINGSPEAK_DEVICE : undefined;
+    return [id, { id, name, age, restingBpm, maxBpm, deviceId, program, sessionsDone, setStartedAt, logs }];
   }),
 );
 
@@ -170,24 +167,24 @@ const rosterSlice = (offset: number, count: number) =>
   SEEDS.map((_, i) => SEEDS[(i + offset) % SEEDS.length][0]).slice(0, count);
 
 export const SEED_SECTIONS: Section[] = [
-  { code: 'BUA-4821', name: 'Building Up A', typeId: 'build', days: days(1, 3), time: '2:00 PM', lengthMin: 60, warmUpMin: 4, cardioMin: 20, coolDownMin: 4, participantIds: rosterSlice(0, 8) },
-  { code: 'BUB-1930', name: 'Building Up B', typeId: 'build', days: days(0, 2), time: '10:00 AM', lengthMin: 60, warmUpMin: 4, cardioMin: 20, coolDownMin: 4, participantIds: rosterSlice(3, 7) },
-  { code: 'GSM-3317', name: 'Getting Started Mornings', typeId: 'start', days: days(0, 4), time: '11:00 AM', lengthMin: 45, warmUpMin: 5, cardioMin: 15, coolDownMin: 5, participantIds: rosterSlice(6, 7) },
-  { code: 'SSC-7720', name: 'Strong & Steady Circuit', typeId: 'strong', days: days(0, 1, 2, 3, 4), time: '9:00 AM', lengthMin: 60, warmUpMin: 3, cardioMin: 30, coolDownMin: 3, participantIds: rosterSlice(9, 11) },
-  { code: 'SBC-2264', name: 'Seated Bike Club', typeId: 'seated', days: days(2), time: '3:00 PM', lengthMin: 45, warmUpMin: 5, cardioMin: 15, coolDownMin: 5, participantIds: rosterSlice(12, 10) },
+  { code: 'BUA-4821', name: 'Building Up A', typeId: 'build', days: days(1, 3), time: '2:00 PM', lengthMin: 60, warmUpMin: 4, cardioMin: 20, coolDownMin: 4, participantIds: rosterSlice(1, 5), videoLink: 'https://meet.google.com/fas-jala-fsr' },
+  { code: 'BUB-1930', name: 'Building Up B', typeId: 'build', days: days(0, 2), time: '10:00 AM', lengthMin: 60, warmUpMin: 4, cardioMin: 20, coolDownMin: 4, participantIds: rosterSlice(3, 3), videoLink: 'https://meet.google.com/cqs-vjlx-bsi' },
+  { code: 'GSM-3317', name: 'Getting Started Mornings', typeId: 'start', days: days(1, 3), time: '11:00 AM', lengthMin: 45, warmUpMin: 5, cardioMin: 15, coolDownMin: 5, participantIds: rosterSlice(0, 4), videoLink: 'https://meet.google.com/ijh-auih-ckn' },
+  { code: 'SSC-7720', name: 'Strong & Steady Circuit', typeId: 'strong', days: days(0, 1, 2, 3, 4), time: '9:00 AM', lengthMin: 60, warmUpMin: 3, cardioMin: 30, coolDownMin: 3, participantIds: rosterSlice(1, 5), videoLink: 'https://meet.google.com/qgt-noha-iba' },
+  { code: 'SBC-2264', name: 'Seated Bike Club', typeId: 'seated', days: days(2), time: '3:00 PM', lengthMin: 45, warmUpMin: 5, cardioMin: 15, coolDownMin: 5, participantIds: rosterSlice(4, 2), videoLink: 'https://meet.google.com/pln-ugzk-hvs' },
 ];
 
 /** Sections already live when the app opens, with how long ago they started (12 min in = cardio). */
-export const SEED_LIVE_MINUTES_AGO: Record<string, number> = { 'BUA-4821': 12 };
+export const SEED_LIVE_MINUTES_AGO: Record<string, number> = { 'GSM-3317': 12 };
 
 export function seedChat(section: Section | undefined): ChatMessage[] {
-  if (section?.code === 'BUA-4821')
+  if (section?.code === PARTICIPANT.sectionCode)
     return [
       { who: INSTRUCTOR.name, staff: true, announcement: true, time: 'Mon 9:00 AM', text: "Welcome to week 6! Tap today on your streak calendar to see your exercises. I'll lead them on the call." },
-      { who: 'June K.', time: 'Mon 9:20 AM', text: 'Can I use the recumbent bike instead of the treadmill today?' },
-      { who: INSTRUCTOR.name, staff: true, time: 'Mon 9:31 AM', text: 'Yes! The bike is perfect, June. Just keep it in your target zone.' },
-      { who: 'Harold B.', time: '1:48 PM', text: 'Running a minute late, save me a treadmill' },
-      { who: 'Margaret L.', time: '1:50 PM', text: 'Water bottle ready. See you all soon!' },
+      { who: 'Name 2', time: 'Mon 9:20 AM', text: 'Can I use the recumbent bike instead of the treadmill today?' },
+      { who: INSTRUCTOR.name, staff: true, time: 'Mon 9:31 AM', text: 'Yes! The bike is perfect, Name 2. Just keep it in your target zone.' },
+      { who: 'Name 1', time: '1:48 PM', text: 'Running a minute late, save me a treadmill' },
+      { who: PARTICIPANT.name, time: '1:50 PM', text: 'Water bottle ready. See you all soon!' },
     ];
   return [{ who: INSTRUCTOR.name, staff: true, announcement: true, time: 'Today', text: `Welcome to ${section ? section.name : 'class'}! Say hi below.` }];
 }

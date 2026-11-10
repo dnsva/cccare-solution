@@ -1,38 +1,28 @@
-import { useEffect } from 'react';
 import { ChatLog } from '../components/ChatLog';
 import { INSTRUCTOR, PARTICIPANT, STAFF_LABEL } from '../data';
 import { strengthMin } from '../lib/dosage';
 import { daysText, sectionWhen } from '../lib/format';
 import { useStore } from '../store';
-import { InClassCard, openVideo } from './InClassCard';
 
 const QUICK_REPLIES = ['On my way!', 'Feeling good today', 'Tired, taking it easy', 'Thanks!'];
 
 type Props = {
   draft: string;
   onDraft: (text: string) => void;
-  joined: boolean;
-  onJoined: (joined: boolean) => void;
-  onOpenPlan: () => void;
 };
 
-export function ParticipantClassPage({ draft, onDraft, joined, onJoined, onOpenPlan }: Props) {
+export function ParticipantClassPage({ draft, onDraft }: Props) {
   const store = useStore();
   const section = store.sectionByCode(PARTICIPANT.sectionCode);
   const me = section?.participantIds.includes(PARTICIPANT.id) ? store.participantById(PARTICIPANT.id) : undefined;
   const live = !!section && store.isLive(section.code);
-
-  // When staff end class, drop the participant back to the class page.
-  useEffect(() => {
-    if (joined && !live) onJoined(false);
-  }, [joined, live, onJoined]);
 
   if (!section || !me)
     return (
       <main className="p-class">
         <section className="p-empty">
           <h1 className="display p-empty__title">You're not in a class yet</h1>
-          <p>Ask your {INSTRUCTOR.credential} for an invite code. Once you're added, your class and its chat show up here.</p>
+          <p>Ask your {INSTRUCTOR.credential} to be added to a class. Once you're added, your class and its chat show up here.</p>
         </section>
       </main>
     );
@@ -46,8 +36,15 @@ export function ParticipantClassPage({ draft, onDraft, joined, onJoined, onOpenP
 
   return (
     <main className="p-class">
-      {joined && live ? (
-        <InClassCard section={section} me={me} onLeave={() => onJoined(false)} onOpenPlan={onOpenPlan} />
+      {live ? (
+        <section className="p-class__banner">
+          <b role="status">● Class is in session</b>
+          {section.videoLink && (
+            <a className="p-class__meet" href={section.videoLink} target="_blank" rel="noopener noreferrer">
+              Join Google Meet
+            </a>
+          )}
+        </section>
       ) : (
         <section className="p-class__hero" style={{ background: type?.color ?? 'var(--sky)' }}>
           <div className="p-class__info">
@@ -60,25 +57,14 @@ export function ParticipantClassPage({ draft, onDraft, joined, onJoined, onOpenP
               {section.warmUpMin} min warm-up · {section.cardioMin} min cardio · {section.coolDownMin} min cool-down ·{' '}
               {Math.max(0, strengthMin(section))} min strength
             </span>
-            {live && <b className="p-class__live">● Class is live now</b>}
           </div>
           <div className="p-class__join-wrap">
-            <button
-              className="p-class__join"
-              disabled={!live}
-              onClick={() => {
-                onJoined(true);
-                openVideo(section.videoLink);
-              }}
-            >
-              {live ? 'Join class now' : 'Not started yet'}
+            <button className="p-class__join" disabled>
+              Not started yet
             </button>
-            {!live && (
-              <span className="p-class__join-hint">
-                {INSTRUCTOR.firstName} starts class {daysText(section.days)} at {section.time}. This button turns on
-                when it's time.
-              </span>
-            )}
+            <span className="p-class__join-hint">
+              {INSTRUCTOR.firstName} starts class {daysText(section.days)} at {section.time}.
+            </span>
           </div>
         </section>
       )}

@@ -199,14 +199,14 @@ export function SectionModal(props: Props) {
       </div>
 
       <label className="field">
-        Video call link (optional)
+        Google Meet link (optional)
         <input
           className="input input--md"
           value={form.videoLink}
           onChange={(e) => update({ videoLink: e.target.value })}
-          placeholder="Paste a Zoom or Meet link"
+          placeholder="https://meet.google.com/abc-defg-hij"
         />
-        <span className="field__hint">Participants open this when they tap "Join class now".</span>
+        <span className="field__hint">Participants see a "Join Google Meet" button with this link while class is in session.</span>
       </label>
 
       {editing && confirmingDelete ? (

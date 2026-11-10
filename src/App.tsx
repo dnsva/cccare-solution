@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { SensorFooter } from './components/SensorFooter';
 import { INSTRUCTOR, PARTICIPANT } from './data';
 import { InstructorApp } from './instructor/InstructorApp';
 import { ParticipantApp } from './participant/ParticipantApp';
@@ -28,6 +29,7 @@ export function App() {
       <div className="app__view" hidden={role !== 'participant'}>
         <ParticipantApp />
       </div>
+      <SensorFooter />
     </div>
   );
 }

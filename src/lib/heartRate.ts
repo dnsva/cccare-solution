@@ -1,5 +1,5 @@
 import type { HrStatus, Participant } from '../types';
-import { maxHrOf, targetZone, type PhaseId } from './dosage';
+import { targetZone, type PhaseId } from './dosage';
 import { firstName } from './format';
 import { isFresh, type LiveDevices } from './liveDevices';
 
@@ -13,7 +13,7 @@ export type Reading = {
   bpm: number | null;
   /** Blood oxygen %, only from a real sensor. */
   spo2: number | null;
-  /** From a real sensor rather than the simulated bracelet. */
+  /** Has a real sensor assigned. */
   live: boolean;
   zone: { low: number; high: number };
   /** "98–112". */
@@ -30,10 +30,6 @@ const SPARK_SAMPLES = 24;
 const SCALE_MIN = 40;
 const SCALE_MAX = 180;
 
-/** Deterministic wobble around a base bpm, so each tick looks like a live reading. */
-const simulate = (base: number, seed: number, tick: number) =>
-  base + Math.round(Math.sin(tick * 0.9 + seed) * 3 + Math.cos(tick * 0.4 + seed * 2) * 2);
-
 const scalePct = (bpm: number) => Math.max(0, Math.min(100, ((bpm - SCALE_MIN) / (SCALE_MAX - SCALE_MIN)) * 100));
 const sparkY = (bpm: number) => Math.max(1, Math.min(SPARK_H - 1, SPARK_H - ((bpm - 50) / 110) * SPARK_H));
 
@@ -45,16 +41,6 @@ const OK_TEXT: Record<PhaseId, string> = {
   strength: 'Strength work',
 };
 
-/** Stable per-participant seed, so removing someone doesn't change everyone else's readings. */
-const seedOf = (id: string) => [...id].reduce((sum, c) => sum + c.charCodeAt(0), 0);
-
-/** Where the bracelet hovers: the participant's cardio pace, or an easy ~30% of reserve outside cardio. */
-function baseBpm(p: Participant, phase: PhaseId): number | undefined {
-  if (p.braceletBaseBpm == null) return undefined;
-  if (phase === 'cardio') return p.braceletBaseBpm;
-  return Math.round(p.restingBpm + (phase === 'strength' ? 0.35 : 0.3) * (maxHrOf(p) - p.restingBpm));
-}
-
 export type LiveFeed = LiveDevices & { now: number };
 
 type Base = Pick<Reading, 'id' | 'name' | 'first' | 'age' | 'zone' | 'range'>;
@@ -64,7 +50,7 @@ const offline = (base: Base, statusText: string, live: boolean): Reading => ({
   bar: { zoneFrom: 0, zoneTo: 0, marker: 0 }, spark: { points: '', bandY: 0, bandH: 0 },
 });
 
-/** A reading with a heart rate: the last value of `history` is now. Same zone rules for real and simulated. */
+/** A reading with a heart rate: the last value of `history` is now. */
 function withBpm(base: Base, history: number[], spo2: number | null, phase: PhaseId, live: boolean): Reading {
   const { zone } = base;
   const bpm = history[history.length - 1];
@@ -84,10 +70,10 @@ function withBpm(base: Base, history: number[], spo2: number | null, phase: Phas
 }
 
 /**
- * One reading per participant. Anyone with a real sensor (`deviceId`) reads from `live`;
- * everyone else gets the simulated bracelet.
+ * One reading per participant. Only a real sensor (`deviceId`) gives a heart rate, read from `live`;
+ * everyone else has none, so no made-up numbers ever show.
  */
-export function readHeartRates(participants: Participant[], tick: number, phase: PhaseId, live?: LiveFeed): Reading[] {
+export function readHeartRates(participants: Participant[], phase: PhaseId, live?: LiveFeed): Reading[] {
   return participants.map((p) => {
     const zone = targetZone(p);
     const base: Base = { id: p.id, name: p.name, first: firstName(p.name), age: p.age, zone, range: `${zone.low}–${zone.high}` };
@@ -101,11 +87,7 @@ export function readHeartRates(participants: Participant[], tick: number, phase:
       return withBpm(base, history.slice(-SPARK_SAMPLES), r.spo2, phase, true);
     }
 
-    const center = baseBpm(p, phase);
-    if (center == null) return offline(base, 'Bracelet offline', false);
-    const seed = seedOf(p.id);
-    const history = Array.from({ length: SPARK_SAMPLES }, (_, i) => simulate(center, seed, tick - (SPARK_SAMPLES - 1) + i));
-    return withBpm(base, history, null, phase, false);
+    return offline(base, 'No live sensor', false);
   });
 }
 

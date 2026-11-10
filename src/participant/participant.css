@@ -386,8 +386,33 @@ button.p-cal__day:hover {
   font-size: 2.2em;
 }
 
-.p-class__live {
-  color: oklch(0.42 0.13 150);
+.p-class__banner {
+  border-radius: 28px;
+  padding: 1em 1.4em;
+  background: oklch(0.92 0.06 150);
+  color: oklch(0.36 0.12 150);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.8em;
+  flex-wrap: wrap;
+}
+
+.p-class__banner b {
+  font: 1.6em/1.1 var(--font-display);
+}
+
+.p-class__meet {
+  min-height: 3.2em;
+  padding: 0 1.3em;
+  border-radius: 18px;
+  background: var(--ink);
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.05em;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
 }
 
 .p-class__join-wrap {
@@ -439,160 +464,6 @@ button.p-cal__day:hover {
   color: var(--ink-soft);
 }
 
-/* ---------- In class ---------- */
-
-.p-live {
-  background: #fff;
-  border: 1.5px solid var(--line);
-  border-radius: 28px;
-  padding: 1.2em;
-  display: flex;
-  flex-direction: column;
-  gap: 1em;
-}
-
-.p-live__top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1em;
-  flex-wrap: wrap;
-}
-
-.p-live__info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2em;
-}
-
-.p-live__badge {
-  font-size: 0.85em;
-  color: oklch(0.42 0.13 150);
-}
-
-.p-live__title {
-  font-size: 2.2em;
-}
-
-.p-live__leave {
-  min-height: 3em;
-  padding: 0 1.2em;
-  border: 2px solid var(--ink);
-  border-radius: 18px;
-  background: #fff;
-  color: var(--ink);
-  font-weight: 700;
-  font-size: 1em;
-}
-
-.p-live__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15em), 1fr));
-  gap: 1em;
-}
-
-.p-live__video {
-  min-height: 13em;
-  border-radius: 22px;
-  background: repeating-linear-gradient(135deg, #2a2440 0 10px, #25203a 10px 20px);
-  color: #e6e2ee;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.8em;
-  padding: 1em;
-  text-align: center;
-}
-
-.p-live__reopen {
-  min-height: 3em;
-  padding: 0 1.1em;
-  border: 0;
-  border-radius: 16px;
-  background: #fff;
-  color: var(--ink);
-  font-weight: 700;
-  font-size: 0.95em;
-}
-
-.p-heart {
-  --heart-bg: var(--mint);
-  --heart-fc: var(--ink);
-  border-radius: 22px;
-  padding: 1.1em 1.2em;
-  background: var(--heart-bg);
-  display: flex;
-  flex-direction: column;
-  gap: 0.6em;
-}
-
-.p-heart--high {
-  --heart-bg: oklch(0.95 0.035 28);
-  --heart-fc: oklch(0.48 0.17 28);
-}
-
-.p-heart--low {
-  --heart-bg: oklch(0.96 0.05 85);
-  --heart-fc: oklch(0.45 0.1 70);
-}
-
-.p-heart--off {
-  --heart-bg: var(--cream);
-  --heart-fc: var(--muted);
-}
-
-.p-heart__label {
-  font-size: 0.8em;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.p-heart__reading {
-  display: flex;
-  align-items: baseline;
-  gap: 0.3em;
-}
-
-.p-heart__bpm {
-  font: 3.6em/1 var(--font-display);
-  color: var(--heart-fc);
-}
-
-.p-heart__bar {
-  height: 10px;
-  border-radius: 5px;
-  background: rgba(52, 45, 71, 0.12);
-  position: relative;
-}
-
-.p-heart__zone {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  border-radius: 5px;
-  background: #96b7c8;
-}
-
-.p-heart__marker {
-  position: absolute;
-  top: -5px;
-  width: 5px;
-  height: 20px;
-  border-radius: 3px;
-  background: var(--heart-fc);
-}
-
-.p-heart__message {
-  color: var(--heart-fc);
-}
-
-.p-heart__range {
-  font-size: 0.8em;
-  color: var(--ink-soft);
-}
-
 .p-chat {
   background: #fff;
   border: 1.5px solid var(--line);
@@ -639,6 +510,21 @@ button.p-cal__day:hover {
   background: var(--cream);
 }
 
+/* On a phone, keep the quick replies to one swipeable row so they don't push the chat off screen. */
+@media (max-width: 600px) {
+  .p-chat__quick {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin: 0 -1em;
+    padding: 0 1em;
+  }
+
+  .p-chat__quick button {
+    flex: none;
+  }
+}
+
 .p-chat__row {
   display: flex;
   gap: 8px;
@@ -671,40 +557,10 @@ button.p-cal__day:hover {
   font-size: 1em;
 }
 
-/* ---------- Session format + in-class phases ---------- */
+/* ---------- Session format ---------- */
 
 .p-class__plan {
   font-size: 0.85em;
-  color: var(--ink-soft);
-}
-
-.p-live .phases {
-  font-size: 0.9em;
-}
-
-.p-live__strength {
-  min-height: 13em;
-  border-radius: 22px;
-  background: var(--sky);
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 0.6em;
-  padding: 1.2em;
-}
-
-.p-live__strength-title {
-  font: 1.6em/1.05 var(--font-display);
-}
-
-.p-live__strength .p-live__reopen {
-  background: var(--ink);
-  color: #fff;
-}
-
-.p-heart__help {
-  font-size: 0.8em;
   color: var(--ink-soft);
 }
 

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { THINGSPEAK_DEVICE } from '../config';
 import { estimatedMaxHr, newExercisesDue, readyForMoreLoad, targetZone } from '../lib/dosage';
 import { plural } from '../lib/format';
 import { isFresh, useLiveDevices } from '../lib/liveDevices';
@@ -18,14 +19,15 @@ const initials = (name: string) =>
 const digits = (v: string) => v.replace(/\D/g, '');
 const isIntIn = (v: number, min: number, max: number) => Number.isInteger(v) && v >= min && v <= max;
 
-/** Section roster: add participants, open their program, pair bracelets, remove from the section. */
+/** Section roster: add participants, open their program, give them the live sensor, remove from the section. */
 export function ParticipantsPanel({ section }: { section: Section }) {
   const store = useStore();
   const roster = store.rosterFor(section);
   const sensors = useLiveDevices();
-  // Re-render every couple of seconds so a sensor that stops sending drops off the list.
-  const now = useNow(2000);
-  const sending = Object.values(sensors.devices).filter((r) => isFresh(r, now));
+  // Re-render every few seconds so the sensor's latest bpm and sending state stay current.
+  const now = useNow(5000);
+  const sensor = sensors.devices[THINGSPEAK_DEVICE];
+  const sending = isFresh(sensor, now) ? sensor : undefined;
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
@@ -47,6 +49,7 @@ export function ParticipantsPanel({ section }: { section: Section }) {
     setAge('');
     setRest('');
     setMax('');
+    setAdding(false);
   };
 
   const programParticipant = programFor ? store.participantById(programFor) : undefined;
@@ -93,9 +96,6 @@ export function ParticipantsPanel({ section }: { section: Section }) {
             />
           </label>
           <div className="roster__form-actions">
-            <button type="button" className="btn btn--outline modal__btn" onClick={() => setAdding(false)}>
-              Done
-            </button>
             <button type="submit" className="btn btn--primary modal__btn" disabled={!canAdd}>
               Add
             </button>
@@ -103,20 +103,18 @@ export function ParticipantsPanel({ section }: { section: Section }) {
           <span className="field__hint roster__form-hint">
             Max HR comes from the graded exercise test. Leave it blank to estimate from age (220 − age) until they've had
             one. Their target zone is 40–60% of heart-rate reserve, and they start on the {store.typeById(section.typeId)?.name.toLowerCase()}{' '}
-            program. They show as offline until their bracelet is paired.
+            program. They have no heart-rate reading until you give them the live sensor.
           </span>
         </form>
       )}
 
       {roster.length === 0 ? (
         <div className="roster__empty">
-          No participants yet. Add them here, or share invite code <b className="mono">{section.code}</b> so they can join
-          themselves.
+          No participants yet. Add them here.
         </div>
       ) : (
         <ul className="roster__list">
           {roster.map((p) => {
-            const paired = p.braceletBaseBpm != null;
             const zone = targetZone(p);
             const ready = p.program.filter((item) => readyForMoreLoad(item, p.logs)).length;
             return (
@@ -162,27 +160,17 @@ export function ParticipantsPanel({ section }: { section: Section }) {
                           Unassign
                         </button>
                       </>
-                    ) : paired ? (
-                      <span className="roster__pill roster__pill--ok">● Bracelet paired</span>
-                    ) : (
-                      <>
-                        <span className="roster__pill roster__pill--off">Not paired</span>
-                        <button className="btn btn--outline roster__btn" onClick={() => store.pairBracelet(p.id)}>
-                          Pair bracelet
-                        </button>
-                      </>
+                    ) : null}
+                    {/* Always offered, even before the sensor sends, so it can be given to anyone. It moves off whoever had it. */}
+                    {!p.deviceId && (
+                      <button
+                        className="btn btn--outline roster__btn"
+                        onClick={() => store.assignDevice(p.id, THINGSPEAK_DEVICE)}
+                      >
+                        Use live sensor {THINGSPEAK_DEVICE}
+                        {sending?.bpm != null && ` · ${sending.bpm} bpm`}
+                      </button>
                     )}
-                    {!p.deviceId &&
-                      sending.map((r) => (
-                        <button
-                          key={r.device}
-                          className="btn btn--outline roster__btn"
-                          onClick={() => store.assignDevice(p.id, r.device)}
-                        >
-                          Use live sensor {r.device}
-                          {r.bpm != null && ` · ${r.bpm} bpm`}
-                        </button>
-                      ))}
                     <button className="roster__remove" onClick={() => setConfirmRemove(p.id)} aria-label={`Remove ${p.name}`}>
                       Remove
                     </button>
@@ -195,10 +183,7 @@ export function ParticipantsPanel({ section }: { section: Section }) {
       )}
       <div className="i-muted roster__foot">
         Participants can also join on their own with invite code <b className="mono">{section.code}</b>.
-        {sensors.status === 'connected' &&
-          (sending.length
-            ? ` Live sensor ${sending.map((r) => r.device).join(', ')} is sending: use it on a participant to show their real heart rate.`
-            : ' Live sensor: turn it on and it appears here once it sends a reading.')}
+        {` Live sensor ${THINGSPEAK_DEVICE} ${sending ? 'is sending' : "isn't sending right now"}. Give it to whoever is wearing it; it moves off anyone who had it before.`}
       </div>
 
       {programParticipant && <ProgramModal participant={programParticipant} onClose={() => setProgramFor(null)} />}

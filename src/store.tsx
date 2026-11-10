@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { defaultProgram, SEED_LIVE_MINUTES_AGO, SEED_PARTICIPANTS, SEED_SECTIONS, SEED_TYPES, seedChat } from './data';
 import { chatTime, fromRelay, newMessageId, sendToRelay, type IncomingChat, type OutgoingChat } from './lib/chatSync';
-import { phaseAt, phaseStartMs, targetZone } from './lib/dosage';
+import { phaseAt, phaseStartMs } from './lib/dosage';
 import { subscribe } from './lib/relayStream';
 import type { ChatMessage, ClassType, Participant, ProgramItem, Section, SectionDetails } from './types';
 
@@ -142,13 +142,6 @@ function useCccareState() {
     },
     removeParticipant(code: string, id: string) {
       updateIds(code, (ids) => ids.filter((x) => x !== id));
-    },
-    /** Demo stand-in for a participant pairing their bracelet in the app: cardio settles mid-zone. */
-    pairBracelet(id: string) {
-      updateParticipant(id, (p) => {
-        const zone = targetZone(p);
-        return { ...p, braceletBaseBpm: Math.round((zone.low + zone.high) / 2) + Math.floor(Math.random() * 5) - 2 };
-      });
     },
     /** Give a participant the real pulse oximeter (or take it back). A device belongs to one person at a time. */
     assignDevice(id: string, deviceId: string | undefined) {

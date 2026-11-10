@@ -17,17 +17,8 @@ export function ParticipantApp() {
   const [movedToday, setMovedToday] = useState(false);
   const [month, setMonth] = useState(STREAK.today.getMonth());
   const [draft, setDraft] = useState('');
-  const [joined, setJoined] = useState(false);
   const [picked, setPicked] = useState(STREAK.today);
   const [planOpen, setPlanOpen] = useState(false);
-
-  /** From class: show today's full plan on the streak page. */
-  const openPlan = () => {
-    setPicked(STREAK.today);
-    setMonth(STREAK.today.getMonth());
-    setPlanOpen(true);
-    setTab('streak');
-  };
 
   return (
     <div className="participant" style={{ fontSize: PARTICIPANT_TEXT_SIZE }}>
@@ -61,13 +52,7 @@ export function ParticipantApp() {
         />
       </div>
       <div hidden={tab !== 'class'}>
-        <ParticipantClassPage
-          draft={draft}
-          onDraft={setDraft}
-          joined={joined}
-          onJoined={setJoined}
-          onOpenPlan={openPlan}
-        />
+        <ParticipantClassPage draft={draft} onDraft={setDraft} />
       </div>
     </div>
   );

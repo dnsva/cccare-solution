@@ -59,7 +59,7 @@ export function ClassesPage({ onOpenSection, onEditType, onNewSection }: Props) 
                     <span className="sec-card__when">{sectionWhen(s)}</span>
                     <div className="sec-card__foot">
                       <span>{plural(s.participantIds.length, 'participant')}</span>
-                      <span className="sec-card__code">{s.code}</span>
+                      {/* <span className="sec-card__code">{s.code}</span> */}
                     </div>
                   </button>
                 ))}

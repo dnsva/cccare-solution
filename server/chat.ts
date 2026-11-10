@@ -3,8 +3,8 @@
  * Messages live in memory only: restarting `npm run dev` clears every chat.
  *
  * A page POSTs a message to /api/chat:
- *   {"id":"m-k3j9x2","section":"BUA-4821","who":"Margaret L.","text":"On my way!"}
- *   {"id":"m-p0q8w1","section":"BUA-4821","who":"Priya S.","staff":true,"announcement":true,"text":"Bring water"}
+ *   {"id":"m-k3j9x2","section":"GSM-3317","who":"Goosette","text":"On my way!"}
+ *   {"id":"m-p0q8w1","section":"GSM-3317","who":"Instructor Goose","staff":true,"announcement":true,"text":"Bring water"}
  * `id` is made by the sender, so a retried send is stored once.
  */
 

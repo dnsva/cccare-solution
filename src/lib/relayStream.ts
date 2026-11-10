@@ -1,7 +1,6 @@
 /**
- * One connection per page to the dev server's /api/stream, shared by everything that needs live data
- * (pulse-oximeter readings, class chat). Browsers allow only about six open connections per site over
- * plain http, so a stream per feature would soon stall a few open tabs.
+ * One connection per page to the dev server's /api/stream, for live class chat. Kept as one shared
+ * connection because browsers allow only about six open connections per site over plain http.
  */
 
 export type RelayStatus = 'connecting' | 'connected' | 'unavailable';

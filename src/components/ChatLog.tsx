@@ -57,11 +57,21 @@ export function ChatLog({ messages, viewer, participantName, onRetry }: Props) {
               </div>
             );
           const tone = mine ? 'mine' : m.staff ? 'staff' : 'other';
+          // Same sender, same minute, right after their last message: skip the repeated name line.
+          const prev = messages[i - 1];
+          const continues =
+            !!prev && !prev.announcement && !prev.status && !m.status &&
+            prev.who === m.who && !!prev.staff === !!m.staff && prev.time === m.time;
           return (
-            <div key={m.id ?? i} className={`chat-msg chat-msg--${tone}${m.status ? ' chat-msg--' + m.status : ''}`}>
-              <span className="chat-msg__name">
-                {name} · {when(m)}
-              </span>
+            <div
+              key={m.id ?? i}
+              className={`chat-msg chat-msg--${tone}${m.status ? ' chat-msg--' + m.status : ''}${continues ? ' chat-msg--cont' : ''}`}
+            >
+              {!continues && (
+                <span className="chat-msg__name">
+                  {name} · {when(m)}
+                </span>
+              )}
               <div className="chat-msg__bubble">{m.text}</div>
             </div>
           );
