@@ -182,8 +182,8 @@ export function ParticipantsPanel({ section }: { section: Section }) {
         </ul>
       )}
       <div className="i-muted roster__foot">
-        Participants can also join on their own with invite code <b className="mono">{section.code}</b>.
-        {` Live sensor ${THINGSPEAK_DEVICE} ${sending ? 'is sending' : "isn't sending right now"}. Give it to whoever is wearing it; it moves off anyone who had it before.`}
+        Live sensor {THINGSPEAK_DEVICE} {sending ? 'is sending' : "isn't sending right now"}. Give it to whoever is wearing
+        it; it moves off anyone who had it before.
       </div>
 
       {programParticipant && <ProgramModal participant={programParticipant} onClose={() => setProgramFor(null)} />}
