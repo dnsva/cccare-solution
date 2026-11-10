@@ -57,9 +57,7 @@ export type Participant = {
   maxBpm?: number;
   /** Prescribed share of heart-rate reserve. Missing means the standard 40–60%. */
   zonePct?: ZonePct;
-  /** Demo bpm the bracelet simulates around during cardio. Missing until a bracelet is paired. */
-  braceletBaseBpm?: number;
-  /** Real pulse oximeter assigned by staff. When set, it replaces the simulated bracelet. */
+  /** Live pulse oximeter assigned by staff. Without one, the participant has no heart-rate reading. */
   deviceId?: string;
   program: ProgramItem[];
   sessionsDone: number;
@@ -101,11 +99,11 @@ export type ChatMessage = {
   text: string;
 };
 
-export type HrView = 'tiles' | 'list' | 'panel';
+export type HrView = 'tiles' | 'list';
 
 export type HrStatus = 'high' | 'low' | 'ok' | 'off';
 
-/** Latest reading from a real pulse oximeter, via the dev-server relay. */
+/** Latest reading from a real pulse oximeter, via ThingSpeak. */
 export type DeviceReading = {
   device: string;
   /** Null when there's no finger on the sensor. */

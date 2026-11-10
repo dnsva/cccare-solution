@@ -4,6 +4,8 @@ type MessageProps = { readings: Reading[]; onMessage: (r: Reading) => void };
 
 const LiveBadge = ({ r }: { r: Reading }) => (r.live ? <span className="live-badge">Live</span> : null);
 const spo2Text = (r: Reading) => (r.spo2 != null ? `SpO₂ ${r.spo2}%` : '');
+/** No live reading: a grey placeholder rather than a number that could be mistaken for real. */
+const bpmText = (r: Reading) => r.bpm ?? '00';
 
 export function HrAlerts({ readings, onMessage, onDismiss }: MessageProps & { onDismiss: (r: Reading) => void }) {
   return readings.map((r) => (
@@ -32,7 +34,7 @@ export function HrTiles({ readings }: { readings: Reading[] }) {
             <span className="i-muted">age {r.age}</span>
           </div>
           <div className="hr-tile__reading">
-            <span className="hr-tile__bpm">{r.bpm ?? '—'}</span>
+            <span className="hr-tile__bpm">{bpmText(r)}</span>
             <span className="i-muted">bpm</span>
             {r.spo2 != null && <span className="hr-tile__spo2">{spo2Text(r)}</span>}
           </div>
@@ -92,63 +94,13 @@ export function HrList({ readings, onMessage }: MessageProps) {
                   <rect x="0" y={r.spark.bandY} width={SPARK_W} height={r.spark.bandH} className="hr-spark-band" />
                   <polyline points={r.spark.points} className="hr-spark-line" />
                 </svg>
-                <span className="hr-row__bpm">{r.bpm ?? '—'}</span>
+                <span className="hr-row__bpm">{bpmText(r)}</span>
                 <span className="i-muted hr-row__range">zone {r.range}</span>
                 {r.flagged ? <MessageButton r={r} onMessage={onMessage} /> : <span />}
               </div>
             ))}
           </div>
         ))}
-    </div>
-  );
-}
-
-export function HrPanel({ readings, onMessage }: MessageProps) {
-  const flagged = readings.filter((r) => r.flagged);
-  const ok = readings.filter((r) => r.status === 'ok');
-  const offline = readings.filter((r) => r.status === 'off').map((r) => r.name);
-  return (
-    <div className="hr-panel">
-      <div className="hr-panel__video">
-        your video call
-        <br />
-        (Zoom / Meet window)
-      </div>
-      <aside className="hr-panel__side">
-        {flagged.map((r) => (
-          <div key={r.id} className={`hr-flag hr-${r.status}`}>
-            <div className="hr-flag__head">
-              <div>
-                <b className="hr-flag__name">
-                  {r.name}
-                  <LiveBadge r={r} />
-                </b>
-                <div className="hr-flag__status">
-                  {r.statusText} · {r.range}
-                  {r.spo2 != null && ` · ${spo2Text(r)}`}
-                </div>
-              </div>
-              <span className="hr-flag__bpm">{r.bpm}</span>
-            </div>
-            <MessageButton r={r} onMessage={onMessage} />
-          </div>
-        ))}
-        <div className="hr-label hr-label--sm">NO CONCERNS · {ok.length}</div>
-        {ok.map((r) => (
-          <div key={r.id} className="hr-ok-row hr-ok">
-            <span className="hr-ok-row__name">
-              <span className="hr-dot hr-dot--sm" />
-              {r.name}
-              <LiveBadge r={r} />
-            </span>
-            <b className="hr-ok-row__bpm">
-              {r.bpm}
-              {r.spo2 != null && <span className="hr-ok-row__spo2"> · {r.spo2}%</span>}
-            </b>
-          </div>
-        ))}
-        <div className="i-muted hr-panel__offline">{offline.length ? `Offline: ${offline.join(', ')}` : ''}</div>
-      </aside>
     </div>
   );
 }

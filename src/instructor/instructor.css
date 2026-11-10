@@ -583,22 +583,12 @@
   background: var(--st-dot);
 }
 
-.hr-dot--sm {
-  width: 10px;
-  height: 10px;
-}
-
 .hr-label {
   font: 600 12px var(--font-mono);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--i-muted);
   padding: 10px 4px 2px;
-}
-
-.hr-label--sm {
-  font-size: 11px;
-  padding: 4px 0 0;
 }
 
 .hr-msg-btn {
@@ -699,6 +689,7 @@
 }
 
 .hr-tile__foot {
+  margin-top: auto;
   display: flex;
   justify-content: space-between;
   gap: 8px;
@@ -798,99 +789,6 @@
   .hr-row .hr-msg-btn {
     grid-column: 1 / -1;
   }
-}
-
-/* Beside-video view */
-.hr-panel {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
-  gap: 14px;
-  min-height: 560px;
-}
-
-@media (max-width: 760px) {
-  .hr-panel {
-    grid-template-columns: 1fr;
-  }
-
-  .hr-panel__video {
-    min-height: 240px;
-  }
-}
-
-.hr-panel__video {
-  border-radius: 20px;
-  background: repeating-linear-gradient(135deg, #2a2440 0 10px, #25203a 10px 20px);
-  display: grid;
-  place-items: center;
-  text-align: center;
-  padding: 20px;
-  font: 13px/1.6 var(--font-mono);
-  color: var(--faint);
-}
-
-.hr-panel__side {
-  background: var(--i-card);
-  border-radius: 20px;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.hr-panel__offline {
-  margin-top: auto;
-  font-size: 14px;
-}
-
-.hr-flag {
-  background: var(--st-bg);
-  border: 2px solid var(--st-bd);
-  border-radius: 16px;
-  padding: 12px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.hr-flag__head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-}
-
-.hr-flag__name {
-  font-size: 17px;
-}
-
-.hr-flag__status {
-  font-size: 13px;
-  color: var(--st-fc);
-}
-
-.hr-flag__bpm {
-  font: 44px/1 var(--font-display);
-  color: var(--st-fc);
-}
-
-.hr-ok-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 2px;
-  border-top: 1px solid var(--i-card-bd);
-  font-size: 16px;
-}
-
-.hr-ok-row__name {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.hr-ok-row__bpm {
-  font: 26px/1 var(--font-display);
 }
 
 /* ---------- Class chat ---------- */
@@ -1287,16 +1185,6 @@
   padding: 4px 10px;
 }
 
-.roster__pill--ok {
-  color: var(--success-ink);
-  background: oklch(0.94 0.05 150);
-}
-
-.roster__pill--off {
-  color: oklch(0.47 0.1 70);
-  background: oklch(0.96 0.05 85);
-}
-
 .roster__btn {
   height: 42px;
   padding: 0 14px;
@@ -1559,11 +1447,6 @@
   margin-left: auto;
   font-weight: 700;
   color: var(--st-fc);
-}
-
-.hr-ok-row__spo2 {
-  font: 400 14px var(--font-body);
-  color: var(--muted);
 }
 
 .hr-relay {

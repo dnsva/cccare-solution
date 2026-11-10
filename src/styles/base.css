@@ -83,6 +83,17 @@ button {
   flex-direction: column;
 }
 
+.sensor-footer {
+  display: flex;
+  gap: 8px 24px;
+  flex-wrap: wrap;
+  padding: 10px 20px;
+  border-top: 1px solid var(--line-strong);
+  background: var(--cream);
+  color: var(--ink-soft);
+  font: 14px var(--font-body);
+}
+
 .proto-bar {
   display: flex;
   align-items: center;
@@ -289,10 +300,18 @@ button {
   border-radius: 18px;
 }
 
+.chat-ann__text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .chat-msg {
   display: flex;
   flex-direction: column;
+  /* Each bubble hugs its own text instead of stretching to the width of the name line. */
+  align-items: flex-start;
   align-self: flex-start;
+  min-width: 0;
 }
 
 .chat-msg__name {
@@ -301,8 +320,12 @@ button {
 }
 
 .chat-msg__bubble {
+  max-width: 100%;
   background: var(--cream);
   border-radius: 6px 20px 20px 20px;
+  /* Keep line breaks people type, and break long links or words instead of overflowing. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .chat-msg--staff .chat-msg__bubble {
@@ -310,7 +333,23 @@ button {
 }
 
 .chat-msg--mine {
+  align-items: flex-end;
   align-self: flex-end;
+  text-align: right;
+}
+
+.chat-msg--mine .chat-msg__bubble {
+  text-align: left;
+}
+
+/* A follow-up from the same sender sits close under their previous bubble, with no tail corner. */
+.chat-msg--cont {
+  margin-top: -6px;
+}
+
+.chat-msg--cont .chat-msg__bubble,
+.chat-msg--mine.chat-msg--cont .chat-msg__bubble {
+  border-radius: 20px;
 }
 
 .chat-msg--mine .chat-msg__bubble {
@@ -399,6 +438,7 @@ button {
 }
 
 .chat-log--participant .chat-ann__meta {
+  margin-bottom: 0.2em;
   font-size: 0.75em;
   font-weight: 700;
   color: var(--ink-soft);

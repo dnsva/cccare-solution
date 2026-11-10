@@ -8,7 +8,7 @@ import { useNow } from '../lib/useNow';
 import { useStore } from '../store';
 import type { HrView, Section } from '../types';
 import { ClassChat } from './ClassChat';
-import { HrAlerts, HrList, HrPanel, HrTiles } from './HeartRateViews';
+import { HrAlerts, HrList, HrTiles } from './HeartRateViews';
 import { ParticipantsPanel } from './ParticipantsPanel';
 
 export type ClassTab = 'hr' | 'chat' | 'participants';
@@ -24,7 +24,7 @@ export type ClassUi = {
   announcing: boolean;
 };
 
-/** Bracelets report a new reading this often. */
+/** How often the class page re-renders. */
 const READING_MS = 1500;
 
 type Props = {
@@ -37,7 +37,8 @@ type Props = {
 
 export function ClassPage({ section, ui, updateUi, onBack, onEdit }: Props) {
   const store = useStore();
-  const now = useNow(READING_MS);
+  // Re-render regularly so the class clock ticks and a sensor that stops sending shows as stopped.
+  useNow(READING_MS);
   const sensors = useLiveDevices();
   const type = store.typeById(section.typeId);
   const isLive = store.isLive(section.code);
@@ -45,7 +46,7 @@ export function ClassPage({ section, ui, updateUi, onBack, onEdit }: Props) {
   const elapsed = isLive ? Date.now() - store.liveSince[section.code] : 0;
   const phaseNow = isLive ? phaseAt(section, elapsed) : null;
   const roster = store.rosterFor(section);
-  const readings = readHeartRates(roster, Math.floor(now / READING_MS), phaseNow?.phase.id ?? 'cardio', {
+  const readings = readHeartRates(roster, phaseNow?.phase.id ?? 'cardio', {
     ...sensors,
     now: Date.now(),
   });
@@ -132,7 +133,6 @@ export function ClassPage({ section, ui, updateUi, onBack, onEdit }: Props) {
               options={[
                 ['tiles', 'Tiles'],
                 ['list', 'List'],
-                ['panel', 'Beside video'],
               ]}
               value={ui.view}
               onChange={(view) => updateUi({ view })}
@@ -145,7 +145,7 @@ export function ClassPage({ section, ui, updateUi, onBack, onEdit }: Props) {
         <div className="i-empty">
           <div className="display i-empty__title">Class isn't live</div>
           <div className="i-empty__body">
-            Start the class to see everyone's bracelet heart rate against their target zone. You get an alert if someone
+            Start the class to see live heart rate against each participant's target zone. You get an alert if someone
             goes above their zone, or below it during cardio.
           </div>
           <button className="btn btn--primary i-empty__start" onClick={() => store.setLive(section.code, true)}>
@@ -158,8 +158,7 @@ export function ClassPage({ section, ui, updateUi, onBack, onEdit }: Props) {
         <div className="i-empty">
           <div className="display i-empty__title">No participants yet</div>
           <div className="i-empty__body">
-            Share invite code <b className="i-empty__code">{section.code}</b>, or add participants yourself. They show up
-            here once they pair a bracelet.
+            Share invite code <b className="i-empty__code">{section.code}</b>, or add participants yourself.
           </div>
           <button className="btn btn--primary i-empty__start" onClick={() => updateUi({ tab: 'participants' })}>
             Add participants
@@ -176,12 +175,11 @@ export function ClassPage({ section, ui, updateUi, onBack, onEdit }: Props) {
           />
           {ui.view === 'tiles' && <HrTiles readings={readings} />}
           {ui.view === 'list' && <HrList readings={readings} onMessage={messageParticipant} />}
-          {ui.view === 'panel' && <HrPanel readings={readings} onMessage={messageParticipant} />}
           {sensorIds.length > 0 && (
             <div className={'hr-relay' + (sensorSending ? ' hr-relay--ok' : ' hr-relay--off')} role="status">
               {sensorSending
                 ? '● Live sensor connected'
-                : 'No sensor sending. Check the Arduino is on and on the same Wi-Fi as this laptop.'}
+                : 'No sensor reading in the last minute. Check the Arduino is on and connected to Wi-Fi.'}
             </div>
           )}
           <div className="i-muted hr__note">
