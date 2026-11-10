@@ -305,11 +305,6 @@
   color: var(--muted);
 }
 
-.sec-card__code {
-  font: 600 12px var(--font-mono);
-  color: var(--ink);
-}
-
 .live-pill {
   flex: none;
   font-size: 12px;
@@ -411,16 +406,6 @@
   flex-wrap: wrap;
 }
 
-.class-head__code {
-  font-size: 14px;
-  color: var(--i-muted);
-}
-
-.class-head__code b {
-  font: 600 15px var(--font-mono);
-  color: var(--i-fg);
-}
-
 .type-chip {
   color: var(--ink);
   border-radius: 8px;
@@ -517,11 +502,6 @@
   line-height: 1.45;
   color: var(--i-muted);
   max-width: 460px;
-}
-
-.i-empty__code {
-  font-family: var(--font-mono);
-  color: var(--i-fg);
 }
 
 .i-empty__start {
@@ -982,49 +962,6 @@
   border-color: var(--ink);
   background: var(--ink);
   color: #fff;
-}
-
-.sm-done {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  text-align: center;
-}
-
-.sm-done__title {
-  font-size: 34px;
-}
-
-.sm-done__summary {
-  font-size: 16px;
-}
-
-.sm-done__code {
-  border-radius: 20px;
-  padding: 20px;
-}
-
-.sm-done__code-label {
-  font-size: 14px;
-}
-
-.sm-done__code-value {
-  font: 600 48px/1.1 var(--font-mono);
-  letter-spacing: 0.1em;
-}
-
-.sm-done__hint {
-  font-size: 16px;
-  color: var(--ink-soft);
-}
-
-.sm-done__copy {
-  height: 54px;
-  border-radius: 14px;
-  border: 2px solid var(--ink);
-  background: #fff;
-  color: var(--ink);
-  font: 700 17px var(--font-body);
 }
 
 .sm-row {

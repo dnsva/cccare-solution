@@ -67,7 +67,7 @@ export type Participant = {
 };
 
 export type Section = {
-  /** Invite code, also the section's id. */
+  /** The section's internal id, like "GSM-3317". Not shown in the app. */
   code: string;
   name: string;
   typeId: string;

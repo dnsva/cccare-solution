@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Modal } from '../components/Modal';
 import { CARDIO_CHOICES, COOL_DOWN_CHOICES, sessionDefaults, strengthMin, WARM_UP_CHOICES } from '../lib/dosage';
-import { daysText, makeInviteCode, plural } from '../lib/format';
+import { makeSectionCode, plural } from '../lib/format';
 import { useStore } from '../store';
 import type { Effort, Section, SectionDetails } from '../types';
 
@@ -39,7 +39,7 @@ function MinuteChoices({ label, choices, value, onChange }: { label: string; cho
   );
 }
 
-/** One form for creating and editing a section. Creating ends on the invite-code screen. */
+/** One form for creating and editing a section. */
 export function SectionModal(props: Props) {
   const store = useStore();
   const editing = props.mode === 'edit' ? props.section : null;
@@ -52,12 +52,9 @@ export function SectionModal(props: Props) {
     const typeId = (props.mode === 'create' && props.initialTypeId) || store.types[0]?.id || '';
     return blankDetails(typeId, effortOf(typeId));
   });
-  const [createdCode, setCreatedCode] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const [copied, setCopied] = useState(false);
   const update = (patch: Partial<SectionDetails>) => setForm((prev) => ({ ...prev, ...patch }));
 
-  const type = store.typeById(form.typeId) ?? store.types[0];
   const name = form.name.trim();
   const strength = strengthMin(form);
   const missing = [
@@ -73,55 +70,9 @@ export function SectionModal(props: Props) {
       store.updateSection(editing.code, details);
       return props.onClose();
     }
-    const code = makeInviteCode(name);
-    store.addSection({ ...details, code, participantIds: [] });
-    setCreatedCode(code);
+    store.addSection({ ...details, code: makeSectionCode(name), participantIds: [] });
+    props.onClose();
   };
-
-  if (createdCode)
-    return (
-      <Modal title="Section created" onClose={props.onClose}>
-        <div className="sm-done">
-          <div className="display sm-done__title">{name} is ready</div>
-          <div className="muted sm-done__summary">
-            {daysText(form.days)} · {form.time} · {form.lengthMin} min
-          </div>
-          <div className="sm-done__code" style={{ background: type?.color }}>
-            <div className="sm-done__code-label">Invite code</div>
-            <div className="sm-done__code-value">{createdCode}</div>
-          </div>
-          <div className="sm-done__hint">
-            Participants type this once when they sign up. It puts them in this section. You can also add participants
-            yourself from the section's Participants tab.
-          </div>
-          <button
-            className="sm-done__copy"
-            onClick={() => {
-              navigator.clipboard?.writeText(createdCode).catch(() => {});
-              setCopied(true);
-            }}
-          >
-            {copied ? 'Copied ✓' : 'Copy code'}
-          </button>
-        </div>
-        <div className="modal__foot">
-          <button
-            className="btn btn--outline modal__btn"
-            onClick={() => {
-              setForm(blankDetails(form.typeId, effortOf(form.typeId)));
-              setCreatedCode(null);
-              setCopied(false);
-            }}
-          >
-            Add another
-          </button>
-          <span className="modal__spacer" />
-          <button className="btn btn--primary modal__btn" onClick={props.onClose}>
-            Done
-          </button>
-        </div>
-      </Modal>
-    );
 
   return (
     <Modal title={editing ? 'Edit section' : 'New class section'} onClose={props.onClose} width={680}>
@@ -242,7 +193,7 @@ export function SectionModal(props: Props) {
             Cancel
           </button>
           <button className="btn btn--primary modal__btn" disabled={missing.length > 0} onClick={save}>
-            {editing ? 'Save changes' : 'Create + get invite code'}
+            {editing ? 'Save changes' : 'Create section'}
           </button>
         </div>
       )}

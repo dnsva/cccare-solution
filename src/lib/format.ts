@@ -19,8 +19,8 @@ export const sectionWhen = (s: Pick<Section, 'days' | 'time'>) => `${daysText(s.
 /** "Harold B." → "Harold". A name without a last initial, like "Goosette" or "Name 1", stays whole. */
 export const firstName = (name: string) => name.replace(/\s+[A-Z]\.$/, '');
 
-/** "Gentle Strength C" → "GSC-4821". */
-export function makeInviteCode(name: string): string {
+/** A section's internal id: "Gentle Strength C" → "GSC-4821". Never shown to anyone. */
+export function makeSectionCode(name: string): string {
   const letters = (name.trim().split(/\s+/).map((w) => w[0]).join('').toUpperCase() + 'XXX').slice(0, 3);
   return `${letters}-${1000 + Math.floor(Math.random() * 9000)}`;
 }
