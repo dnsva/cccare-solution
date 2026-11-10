@@ -98,9 +98,6 @@ export function ClassPage({ section, ui, updateUi, onBack, onEdit }: Props) {
           </div>
         </div>
         <div className="class-head__actions">
-          <span className="class-head__code">
-            Invite code <b>{section.code}</b>
-          </span>
           <button
             className={'live-toggle' + (isLive ? '' : ' live-toggle--start')}
             onClick={() => store.setLive(section.code, !isLive)}
@@ -157,10 +154,6 @@ export function ClassPage({ section, ui, updateUi, onBack, onEdit }: Props) {
       {ui.tab === 'hr' && isLive && !hasParticipants && (
         <div className="i-empty">
           <div className="display i-empty__title">No participants yet</div>
-          <div className="i-empty__body">
-            Share invite code <b className="i-empty__code">{section.code}</b>, or add participants yourself. They show up
-            here once they pair a bracelet.
-          </div>
           <button className="btn btn--primary i-empty__start" onClick={() => updateUi({ tab: 'participants' })}>
             Add participants
           </button>

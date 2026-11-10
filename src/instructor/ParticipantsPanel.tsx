@@ -110,8 +110,7 @@ export function ParticipantsPanel({ section }: { section: Section }) {
 
       {roster.length === 0 ? (
         <div className="roster__empty">
-          No participants yet. Add them here, or share invite code <b className="mono">{section.code}</b> so they can join
-          themselves.
+          No participants yet. Add them here.
         </div>
       ) : (
         <ul className="roster__list">
@@ -167,9 +166,6 @@ export function ParticipantsPanel({ section }: { section: Section }) {
                     ) : (
                       <>
                         <span className="roster__pill roster__pill--off">Not paired</span>
-                        <button className="btn btn--outline roster__btn" onClick={() => store.pairBracelet(p.id)}>
-                          Pair bracelet
-                        </button>
                       </>
                     )}
                     {!p.deviceId &&
