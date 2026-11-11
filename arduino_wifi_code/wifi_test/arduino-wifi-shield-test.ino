@@ -2,7 +2,7 @@
 #include <Wire.h>
 #include <Bridge.h>
 #include <Process.h>
-#include "secrets.h"
+#include "../secrets.h"
 
 
 DFRobot_MAX30102 particleSensor;
