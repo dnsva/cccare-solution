@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { THINGSPEAK_DEVICE } from '../config';
-import { estimatedMaxHr, newExercisesDue, readyForMoreLoad, targetZone } from '../lib/dosage';
+import { estimatedMaxHr, newExercisesDue, readyForMoreLoad, targetZone, zoneProblem } from '../lib/dosage';
 import { plural } from '../lib/format';
 import { isFresh, useLiveDevices } from '../lib/liveDevices';
 import { useNow } from '../lib/useNow';
@@ -39,8 +39,12 @@ export function ParticipantsPanel({ section }: { section: Section }) {
   const ageNum = Number(age);
   const restNum = Number(rest);
   const maxNum = max ? Number(max) : undefined;
-  const validMax = maxNum == null || (isIntIn(maxNum, 90, 220) && maxNum > restNum + 20);
-  const canAdd = !!name.trim() && isIntIn(ageNum, 18, 110) && isIntIn(restNum, 40, 110) && validMax;
+  const validAge = isIntIn(ageNum, 18, 110);
+  const validRest = isIntIn(restNum, 40, 110);
+  const validMax = maxNum == null || isIntIn(maxNum, 90, 220);
+  // Only check the zone once age and resting HR make sense, so staff aren't warned while still typing them.
+  const problem = validAge && validRest ? zoneProblem({ age: ageNum, restingBpm: restNum, maxBpm: maxNum }) : null;
+  const canAdd = !!name.trim() && validAge && validRest && validMax && !problem;
 
   const add = () => {
     if (!canAdd) return;
@@ -100,6 +104,11 @@ export function ParticipantsPanel({ section }: { section: Section }) {
               Add
             </button>
           </div>
+          {problem && (
+            <span className="field__hint field__hint--error roster__form-hint" role="alert">
+              {problem}
+            </span>
+          )}
           <span className="field__hint roster__form-hint">
             Max HR comes from the graded exercise test. Leave it blank to estimate from age (220 − age) until they've had
             one. Their target zone is 40–60% of heart-rate reserve, and they start on the {store.typeById(section.typeId)?.name.toLowerCase()}{' '}
