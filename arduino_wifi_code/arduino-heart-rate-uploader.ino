@@ -24,18 +24,30 @@ int readingsCount = 0;
 unsigned int heartRateReadings[maxReadings];
 
 float smoothedHeartRate = -1;
+bool skipNextReading = false;
 
 void setup() {
   Serial.begin(115200);
   Wire.begin(); // Enable I2C (SDA: A4, SCL: A5)
+  Serial.println("Connecting to WiFi shield...");
   Bridge.begin();
+  Serial.println("Shield ready");
 
   // If sensor fails to initialize, print an error message
   while (!particleSensor.begin()) {
     Serial.println("MAX30102 not found!");
     delay(200);
   }
-  particleSensor.sensorConfiguration(60, SAMPLEAVG_8, MODE_MULTILED, SAMPLERATE_400, PULSEWIDTH_411,ADCRANGE_16384);
+
+  Serial.println("MAX30102 ready");
+
+  // MAX30102 settings, selected by testing (see README).
+  // Effective output rate = sample rate / averaging, and must stay 25 Hz:
+  // the library's heart-rate calculation requires it. Change both together.
+  const uint8_t LED_BRIGHTNESS = 20;
+
+  particleSensor.sensorConfiguration(LED_BRIGHTNESS, SAMPLEAVG_16, MODE_MULTILED,
+                                    SAMPLERATE_400, PULSEWIDTH_215, ADCRANGE_2048);
 }
 
 
@@ -81,9 +93,9 @@ float calculateTrimmedMean(const unsigned int readings[], unsigned int length) {
 void loop() {
   particleSensor.heartrateAndOxygenSaturation(&spo2, &spo2Valid, &heartRate, &heartRateValid);
 
-  if (millis() - lastUploadTime >= uploadInterval && millis() - lastValidTime < signalTimeout && smoothedHeartRate >= 0) {
-    lastUploadTime = millis();
-    sendToThingSpeak(API_KEY, "field1", String(smoothedHeartRate));
+  if (skipNextReading) {
+    skipNextReading = false;
+    return;
   }
 
   if (!heartRateValid) {
@@ -110,5 +122,11 @@ void loop() {
     Serial.println(smoothedHeartRate);
 
     lastValidTime = millis();
+  }
+
+  if (millis() - lastUploadTime >= uploadInterval && millis() - lastValidTime < signalTimeout && smoothedHeartRate >= 0) {
+    lastUploadTime = millis();
+    sendToThingSpeak(API_KEY, "field1", String(smoothedHeartRate));
+    skipNextReading = true;
   }
 }
