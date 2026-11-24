@@ -1,5 +1,6 @@
 import { alertText, SPARK_H, SPARK_W, type Reading } from '../lib/heartRate';
-import { depthText, faultsText, successPct, type SquatReps } from '../lib/squatReps';
+import { plural } from '../lib/format';
+import { mainProblem, repsText, successPct, type SquatReps } from '../lib/squatReps';
 
 /** Participant id → their squat reps this class. A null value means the camera is on them but no reps yet. */
 export type SquatsById = Record<string, (SquatReps & { sending: boolean }) | null>;
@@ -11,23 +12,39 @@ const spo2Text = (r: Reading) => (r.spo2 != null ? `SpO₂ ${r.spo2}%` : '');
 /** No live reading: a grey placeholder rather than a number that could be mistaken for real. */
 const bpmText = (r: Reading) => r.bpm ?? '00';
 
-const squatText = (reps: SquatReps | null) =>
-  reps && reps.total > 0 ? `${reps.good} of ${reps.total} squats good` : 'No squats yet this class';
+type SquatStatus = (SquatReps & { sending: boolean }) | null;
 
-function SquatRate({ reps }: { reps: (SquatReps & { sending: boolean }) | null }) {
+/** Squat form from the pose camera: the share of good reps so far, what to coach, and how the last few reps went. */
+function SquatRate({ reps }: { reps: SquatStatus }) {
   const counted = reps && reps.total > 0 ? reps : null;
-  const faults = counted ? faultsText(counted) : '';
-  const depth = counted ? depthText(counted) : '';
+  const pct = counted ? successPct(counted) : 0;
+  const problem = counted ? mainProblem(counted) : '';
+  // Only meaningful while the camera is sending: otherwise "the last 20 s" isn't the last 20 s.
+  const recent = reps?.sending ? reps.recent : null;
   return (
     <div className="hr-squat">
-      <span className="hr-squat__label">Squat success</span>
-      {counted && <b className="hr-squat__pct">{successPct(counted)}%</b>}
-      <span className="i-muted hr-squat__count">{squatText(reps)}</span>
-      {faults && <span className="hr-squat__detail">Bad: {faults}</span>}
-      {depth && <span className="i-muted hr-squat__detail">Depth: {depth}</span>}
-      {reps && !reps.sending && (
-        <span className="hr-squat__detail hr-squat__off">Camera not sending. Showing its last count.</span>
+      <div className="hr-squat__head">
+        <span className="hr-squat__label">Squat form</span>
+        {counted && <b className="hr-squat__pct">{pct}% good</b>}
+      </div>
+      {counted ? (
+        <>
+          <div className="hr-squat__bar" role="img" aria-label={`${pct}% of squats with good form`}>
+            <div style={{ width: `${pct}%` }} />
+          </div>
+          <span className="i-muted">
+            {counted.good} of {plural(counted.total, 'squat')} good so far{problem && `; mostly ${problem}`}
+          </span>
+        </>
+      ) : (
+        <span className="i-muted">No squats yet this class</span>
       )}
+      {recent && (
+        <span className={'hr-squat__recent' + (recent.good < recent.total ? ' hr-squat__recent--bad' : '')}>
+          Last 20 s: {recent.total ? repsText(recent) : 'no new squats'}
+        </span>
+      )}
+      {reps && !reps.sending && <span className="hr-squat__off">Camera not sending. Showing its last count.</span>}
     </div>
   );
 }
