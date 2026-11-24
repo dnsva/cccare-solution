@@ -31,6 +31,17 @@ export function targetZone(p: ZoneInput): { low: number; high: number } {
   return { low: Math.round(rest + pct.low * reserve), high: Math.round(rest + pct.high * reserve) };
 }
 
+/** The smallest heart-rate reserve (max − resting) that still gives a zone at least 5 bpm wide, since 20% of 25 = 5. */
+export const MIN_RESERVE = 25;
+
+/** Why these heart-rate numbers can't give a usable target zone, or null if they can. */
+export function zoneProblem(p: Pick<Participant, 'age' | 'restingBpm' | 'maxBpm'>): string | null {
+  if (maxHrOf(p) - p.restingBpm >= MIN_RESERVE) return null;
+  if (p.maxBpm == null)
+    return `Estimated max HR (220 − age = ${estimatedMaxHr(p.age)}) is too close to resting HR (${p.restingBpm}) for a usable zone. Enter the max HR from their graded exercise test.`;
+  return `Max HR must be at least ${p.restingBpm + MIN_RESERVE} (resting HR + ${MIN_RESERVE}) for a usable zone.`;
+}
+
 export const zonePctText = (pct: ZonePct = HRR_ZONE) => `${Math.round(pct.low * 100)}–${Math.round(pct.high * 100)}%`;
 
 // ---------- Session phases ----------

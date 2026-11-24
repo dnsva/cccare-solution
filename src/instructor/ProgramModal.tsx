@@ -13,6 +13,7 @@ import {
   REPS_TO_PROGRESS,
   sessionsInSet,
   targetZone,
+  zoneProblem,
   ZONE_PRESETS,
   zonePctText,
 } from '../lib/dosage';
@@ -39,8 +40,9 @@ export function ProgramModal({ participant: p, onClose }: { participant: Partici
     zonePct: samePct(pct, HRR_ZONE) ? undefined : pct,
   };
   const validRest = Number.isInteger(restNum) && restNum >= 40 && restNum <= 110;
-  const validMax = maxNum == null || (maxNum >= 90 && maxNum <= 220 && maxNum > restNum + 20);
-  const zone = validRest && validMax ? targetZone({ age: p.age, ...hr }) : null;
+  const validMax = maxNum == null || (Number.isInteger(maxNum) && maxNum >= 90 && maxNum <= 220);
+  const problem = validRest ? zoneProblem({ age: p.age, ...hr }) : null;
+  const zone = validRest && validMax && !problem ? targetZone({ age: p.age, ...hr }) : null;
   const missingLoad = program.some((item) => kindOf(item.category) === 'strength' && !item.load.trim());
   const canSave = !!zone && !missingLoad;
 
@@ -124,7 +126,9 @@ export function ProgramModal({ participant: p, onClose }: { participant: Partici
               {restNum} resting)
             </>
           ) : (
-            <span className="pg-warn">Resting HR should be 40–110, and max HR at least 20 above it.</span>
+            <span className="pg-warn" role="alert">
+              {problem ?? 'Resting HR should be 40–110, and max HR 90–220.'}
+            </span>
           )}
         </div>
       </section>

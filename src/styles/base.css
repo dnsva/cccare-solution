@@ -226,6 +226,11 @@ button {
   color: var(--muted);
 }
 
+.field__hint--error {
+  color: var(--danger);
+  font-weight: 700;
+}
+
 .input {
   height: 52px;
   border: 2px solid var(--line-strong);
