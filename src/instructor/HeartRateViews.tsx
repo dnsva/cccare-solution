@@ -1,4 +1,9 @@
 import { alertText, SPARK_H, SPARK_W, type Reading } from '../lib/heartRate';
+import { plural } from '../lib/format';
+import { mainProblem, repsText, successPct, type SquatReps } from '../lib/squatReps';
+
+/** Participant id → their squat reps this class. A null value means the camera is on them but no reps yet. */
+export type SquatsById = Record<string, (SquatReps & { sending: boolean }) | null>;
 
 type MessageProps = { readings: Reading[]; onMessage: (r: Reading) => void };
 
@@ -6,6 +11,43 @@ const LiveBadge = ({ r }: { r: Reading }) => (r.live ? <span className="live-bad
 const spo2Text = (r: Reading) => (r.spo2 != null ? `SpO₂ ${r.spo2}%` : '');
 /** No live reading: a grey placeholder rather than a number that could be mistaken for real. */
 const bpmText = (r: Reading) => r.bpm ?? '00';
+
+type SquatStatus = (SquatReps & { sending: boolean }) | null;
+
+/** Squat form from the pose camera: the share of good reps so far, what to coach, and how the last few reps went. */
+function SquatRate({ reps }: { reps: SquatStatus }) {
+  const counted = reps && reps.total > 0 ? reps : null;
+  const pct = counted ? successPct(counted) : 0;
+  const problem = counted ? mainProblem(counted) : '';
+  // Only meaningful while the camera is sending: otherwise "the last 20 s" isn't the last 20 s.
+  const recent = reps?.sending ? reps.recent : null;
+  return (
+    <div className="hr-squat">
+      <div className="hr-squat__head">
+        <span className="hr-squat__label">Squat form</span>
+        {counted && <b className="hr-squat__pct">{pct}% good</b>}
+      </div>
+      {counted ? (
+        <>
+          <div className="hr-squat__bar" role="img" aria-label={`${pct}% of squats with good form`}>
+            <div style={{ width: `${pct}%` }} />
+          </div>
+          <span className="i-muted">
+            {counted.good} of {plural(counted.total, 'squat')} good so far{problem && `; mostly ${problem}`}
+          </span>
+        </>
+      ) : (
+        <span className="i-muted">No squats yet this class</span>
+      )}
+      {recent && (
+        <span className={'hr-squat__recent' + (recent.good < recent.total ? ' hr-squat__recent--bad' : '')}>
+          Last 20 s: {recent.total ? repsText(recent) : 'no new squats'}
+        </span>
+      )}
+      {reps && !reps.sending && <span className="hr-squat__off">Camera not sending. Showing its last count.</span>}
+    </div>
+  );
+}
 
 export function HrAlerts({ readings, onMessage, onDismiss }: MessageProps & { onDismiss: (r: Reading) => void }) {
   return readings.map((r) => (
@@ -21,7 +63,7 @@ export function HrAlerts({ readings, onMessage, onDismiss }: MessageProps & { on
   ));
 }
 
-export function HrTiles({ readings }: { readings: Reading[] }) {
+export function HrTiles({ readings, squats }: { readings: Reading[]; squats: SquatsById }) {
   return (
     <div className="hr-tiles">
       {readings.map((r) => (
@@ -50,6 +92,7 @@ export function HrTiles({ readings }: { readings: Reading[] }) {
             <span className="hr-tile__status">{r.statusText}</span>
             <span className="i-muted">zone {r.range}</span>
           </div>
+          {r.id in squats && <SquatRate reps={squats[r.id]} />}
         </div>
       ))}
     </div>
@@ -62,7 +105,7 @@ const MessageButton = ({ r, onMessage }: { r: Reading; onMessage: (r: Reading) =
   </button>
 );
 
-export function HrList({ readings, onMessage }: MessageProps) {
+export function HrList({ readings, squats, onMessage }: MessageProps & { squats: SquatsById }) {
   const groups: [string, Reading[]][] = [
     ['Check on now', readings.filter((r) => r.flagged)],
     ['All good', readings.filter((r) => r.status === 'ok')],
@@ -89,6 +132,7 @@ export function HrList({ readings, onMessage }: MessageProps) {
                     age {r.age} · {r.statusText}
                     {r.spo2 != null && ` · ${spo2Text(r)}`}
                   </div>
+                  {r.id in squats && <SquatRate reps={squats[r.id]} />}
                 </div>
                 <svg className="hr-row__spark" width={SPARK_W} height={SPARK_H} aria-hidden="true">
                   <rect x="0" y={r.spark.bandY} width={SPARK_W} height={r.spark.bandH} className="hr-spark-band" />

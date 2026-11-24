@@ -681,6 +681,74 @@
   font-weight: 700;
 }
 
+.hr-squat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--st-bd);
+  font-size: 14px;
+}
+
+.hr-squat__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.hr-squat__label {
+  font-weight: 700;
+}
+
+.hr-squat__pct {
+  font: 24px/1 var(--font-display);
+}
+
+/* Green share = squats with good form. */
+.hr-squat__bar {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--i-track);
+  overflow: hidden;
+}
+
+.hr-squat__bar > div {
+  height: 100%;
+  background: var(--success-ink);
+}
+
+.hr-squat__recent {
+  font-weight: 700;
+  color: var(--success-ink);
+}
+
+.hr-squat__recent--bad,
+.hr-squat__off {
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.instructor--dark .hr-squat__recent {
+  color: oklch(0.8 0.14 150);
+}
+
+.instructor--dark .hr-squat__bar > div {
+  background: oklch(0.7 0.14 150);
+}
+
+.instructor--dark .hr-squat__recent--bad,
+.instructor--dark .hr-squat__off {
+  color: oklch(0.78 0.14 28);
+}
+
+.hr-row .hr-squat {
+  margin-top: 6px;
+  padding-top: 0;
+  border-top: none;
+  max-width: 420px;
+}
+
 .hr-range {
   height: 8px;
   border-radius: 4px;
