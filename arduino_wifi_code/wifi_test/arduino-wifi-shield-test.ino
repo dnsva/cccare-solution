@@ -1,3 +1,10 @@
+/* =============================================
+
+Test file to try sending data from pulse oximeter
+to Wi-Fi shield
+
+============================================= */
+
 #include <DFRobot_MAX30102.h>
 #include <Wire.h>
 #include <Bridge.h>

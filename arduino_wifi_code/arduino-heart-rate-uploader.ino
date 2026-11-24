@@ -11,6 +11,7 @@ int32_t spo2;
 int32_t heartRate;
 int8_t spo2Valid;
 int8_t heartRateValid;
+// All times in ms
 unsigned long uploadInterval = 20000;
 unsigned long signalTimeout = 10000;
 int sensorRetryDelay = 50;
@@ -23,7 +24,7 @@ const int maxReadings = 5;
 int readingsCount = 0;
 unsigned int heartRateReadings[maxReadings];
 
-float smoothedHeartRate = -1;
+float smoothedHeartRate = -1; // Variable to store trimmed mean of past 5 heart rate readings
 bool skipNextReading = false;
 
 void setup() {
@@ -106,6 +107,7 @@ void loop() {
     Serial.print("New heart rate: ");
     Serial.println(heartRate);
 
+    // Shift entries in array of last 5 readings down to make room for new reading
     for (int i = maxReadings - 1; i > 0; i--) {
       heartRateReadings[i] = heartRateReadings[i - 1];
     }
@@ -114,6 +116,7 @@ void loop() {
       readingsCount++;
     }
 
+    // Add new reading to freed up slot in heartRateReadings array
     heartRateReadings[0] = heartRate;
 
     smoothedHeartRate = calculateTrimmedMean(heartRateReadings, readingsCount);
