@@ -1,14 +1,16 @@
 import { PhaseStrip } from '../components/PhaseStrip';
+import { SQUAT_CAMERA_PARTICIPANT_ID } from '../config';
 import { Segmented } from '../components/Segmented';
 import { phaseAt, strengthMin, zonePctText } from '../lib/dosage';
 import { daysText, formatClock, plural } from '../lib/format';
 import { checkInMessage, readHeartRates, type Reading } from '../lib/heartRate';
 import { isFresh, useLiveDevices } from '../lib/liveDevices';
+import { cameraSending, useSquatReps } from '../lib/squatReps';
 import { useNow } from '../lib/useNow';
 import { useStore } from '../store';
 import type { HrView, Section } from '../types';
 import { ClassChat } from './ClassChat';
-import { HrAlerts, HrList, HrTiles } from './HeartRateViews';
+import { HrAlerts, HrList, HrTiles, type SquatsById } from './HeartRateViews';
 import { ParticipantsPanel } from './ParticipantsPanel';
 
 export type ClassTab = 'hr' | 'chat' | 'participants';
@@ -50,6 +52,15 @@ export function ClassPage({ section, ui, updateUi, onBack, onEdit }: Props) {
     ...sensors,
     now: Date.now(),
   });
+  const squatReps = useSquatReps(isLive);
+  // Only count reps from this class: an upload from before it started belongs to an earlier session.
+  const squatsNow =
+    squatReps && isLive && squatReps.at >= store.liveSince[section.code]
+      ? { ...squatReps, sending: cameraSending(squatReps, Date.now()) }
+      : null;
+  const squats: SquatsById = roster.some((p) => p.id === SQUAT_CAMERA_PARTICIPANT_ID)
+    ? { [SQUAT_CAMERA_PARTICIPANT_ID]: squatsNow }
+    : {};
   const sensorIds = roster.flatMap((p) => (p.deviceId ? [p.deviceId] : []));
   const sensorSending = sensorIds.some((id) => isFresh(sensors.devices[id], Date.now()));
   const hasParticipants = readings.length > 0;
@@ -167,8 +178,8 @@ export function ClassPage({ section, ui, updateUi, onBack, onEdit }: Props) {
             onMessage={messageParticipant}
             onDismiss={(r) => updateUi({ dismissed: { ...ui.dismissed, [dismissKey(r)]: true } })}
           />
-          {ui.view === 'tiles' && <HrTiles readings={readings} />}
-          {ui.view === 'list' && <HrList readings={readings} onMessage={messageParticipant} />}
+          {ui.view === 'tiles' && <HrTiles readings={readings} squats={squats} />}
+          {ui.view === 'list' && <HrList readings={readings} squats={squats} onMessage={messageParticipant} />}
           {sensorIds.length > 0 && (
             <div className={'hr-relay' + (sensorSending ? ' hr-relay--ok' : ' hr-relay--off')} role="status">
               {sensorSending

@@ -2,5 +2,6 @@ node_modules
 dist
 .DS_Store
 *.docx
-arduino_wifi_code/secrets.h
-arduino_wifi_code/**/secrets.h
+# API keys stay out of git: Arduino sketches keep them in secrets.h, scripts in .env.
+secrets.h
+.env
