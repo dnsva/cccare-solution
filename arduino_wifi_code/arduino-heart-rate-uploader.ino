@@ -49,17 +49,21 @@ void setup() {
 
   particleSensor.sensorConfiguration(LED_BRIGHTNESS, SAMPLEAVG_16, MODE_MULTILED,
                                     SAMPLERATE_400, PULSEWIDTH_215, ADCRANGE_2048);
+
+  Serial.println("Starting loop");
 }
 
-
+// Creates a function to programatically send data to the ThingSpeak service to be accessed by the website
 void sendToThingSpeak(String apiKey, String field, String data) {
     Process p;
     p.begin("curl");
     p.addParameter("-s");
 
+    // Defines the specific channel (destination) to send data to using the API key, the field to send to, and the data itself
     p.addParameter(String("http://api.thingspeak.com/update?api_key=") + apiKey + "&" + field + "=" + data);
     p.run();
 
+    // Prints the exit code and reply to determine if data was sent properly (no reply value = likely invalid)
     Serial.print("exit code: ");
     Serial.println(p.exitValue());
     Serial.print("reply: ");
@@ -68,12 +72,13 @@ void sendToThingSpeak(String apiKey, String field, String data) {
     Serial.println("value: " + data);
 }
 
-
+// Calculates the mean of all values besides the highest and lowest in an array
 float calculateTrimmedMean(const unsigned int readings[], unsigned int length) {
     if (length < 3) {
       return -1;
     }
 
+    // Sorts the array to easily find max and min value
     unsigned int sorted[length];
     for (unsigned int i = 0; i < length; i++) {
         sorted[i] = readings[i];
@@ -83,17 +88,21 @@ float calculateTrimmedMean(const unsigned int readings[], unsigned int length) {
 
     unsigned int sum = 0;
 
+    // Loops through every value in the array except the first and last to find trimmed sum
     for (unsigned int i = 1; i < length - 1; i++) {
         sum += sorted[i];
     }
 
+    // Returns trimmed mean
     return (float)sum / (length - 2);
 }
 
 
 void loop() {
+  // Reads the heart rate with the MAX30102
   particleSensor.heartrateAndOxygenSaturation(&spo2, &spo2Valid, &heartRate, &heartRateValid);
 
+  // If a reading has recently been sent, the new reading may be innacurate due to timing issues, so it is discarded
   if (skipNextReading) {
     skipNextReading = false;
     return;
@@ -127,6 +136,7 @@ void loop() {
     lastValidTime = millis();
   }
 
+  // If it has been long enough since the last upload and the data is valid, send new heart rate data to ThingSpeak
   if (millis() - lastUploadTime >= uploadInterval && millis() - lastValidTime < signalTimeout && smoothedHeartRate >= 0) {
     lastUploadTime = millis();
     sendToThingSpeak(API_KEY, "field1", String(smoothedHeartRate));
